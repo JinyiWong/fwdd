@@ -1,0 +1,39 @@
+extends layout/dashboard.layout.pug
+
+block content
+  .card.leaderboard
+    h2 Results
+    p Fight back stronger next round
+
+    table
+      thead
+        tr
+          th Rank
+          th Player
+          th Score
+          th Time Taken (minutes)
+      tbody
+        tr
+          td 1
+          td winter
+          td 1507
+          td 10:08
+        tr
+          td 2
+          td Karina
+          td 1500
+          td 15:09
+        tr
+          td 3
+          td You
+          td 1050
+          td 30:08
+        tr
+          td 4
+          td Yishan
+          td 990
+          td 35:59
+
+    // 🔹 Action Button (styled using your theme)
+    .action-btn-container
+      button.action-btn(type="button") View Answered Question

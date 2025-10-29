@@ -1,8 +1,11 @@
-doctype html 
-html
-    head        
-        title Python Escape
-    body
-        header
-            h1 Python Escape
-        block content
+extends layout/landing.layout.pug
+
+block content
+  main.hero
+    .hero-container
+      .hero-image
+        img(src="/images/index_bg.png", alt="Cyber Escape Room")
+      .hero-text
+        h2 Python Escape
+        p Master Python programming through immersive cyber adventures. Solve puzzles, hack systems, and escape digital realms while learning real code.
+        a.button(href="/signin") Start Learning

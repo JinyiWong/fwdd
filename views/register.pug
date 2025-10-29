@@ -1,0 +1,25 @@
+extends layout/auth.layout.pug
+
+block content
+  main.auth
+    .auth-container
+      h2 Register
+      form(action="/register" method="POST")
+        .form-group
+          label(for="username") Username
+          input(type="text" id="username" name="username" required placeholder="")
+        .form-group
+          label(for="email") Email
+          input(type="email" id="email" name="email" required placeholder="")
+        .form-group
+          label(for="password") Password
+          input(type="password" id="password" name="password" required placeholder="")
+        .form-group
+          label(for="confirmPassword") Confirm Password
+          input(type="password" id="confirmPassword" name="confirmPassword" required placeholder="")
+
+        p.register-text
+          | Already have an account?
+          a(href="/signin")  Sign In
+
+        button.button(type="submit") Register

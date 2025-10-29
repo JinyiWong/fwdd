@@ -1,0 +1,66 @@
+extends layout/dashboard.layout.pug
+
+block content
+  main.dashboard
+    .card.history
+      h2 Escape History
+      p Your past escape room sessions
+
+      table
+        thead
+          tr
+            th No
+            th Game Code
+            th Score
+            th Rank
+            th Time Taken (minutes)
+            th Date
+        tbody
+          tr
+            td 1
+            td HACK001
+            td 1507
+            td 
+              span.rank-badge #2
+            td 10:08
+            td 2025-06-30
+          tr
+            td 2
+            td ABDJ982
+            td 1500
+            td 
+              span.rank-badge #1
+            td 10:08
+            td 2025-06-29
+          tr
+            td 3
+            td UGSI456
+            td 1495
+            td 
+              span.rank-badge #1
+            td 10:08
+            td 2025-06-28
+          tr
+            td 4
+            td HDBE956
+            td 1490
+            td 
+              span.rank-badge #1
+            td 10:08
+            td 2025-06-27
+          tr
+            td 5
+            td GSJA037
+            td 1380
+            td 
+              span.rank-badge #3
+            td 10:08
+            td 2025-06-26
+          tr
+            td 6
+            td HJSH283
+            td 1300
+            td 
+              span.rank-badge #4
+            td 10:08
+            td 2025-06-25

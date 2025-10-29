@@ -1,0 +1,80 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Python Escape Dashboard
+    link(rel="stylesheet", href="/css/dashboard.css")
+    link(href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;600;700;800&display=swap", rel="stylesheet")
+  body
+    header.dashboard-header
+      div.logo
+        img(src="/images/logo.png", alt="Python Escape Logo")
+        div.header-text
+          h1 Python Escape
+          span Welcome, user
+
+      a.logout(href="/logout") 
+        i(class="icon-logout")
+        |  LOGOUT
+
+    main.dashboard
+      section.left
+        .card.create-session
+          h2 Create a new session
+          p Start a new escape room session and invite others
+          button.btn Create Session
+
+        .card.join-session
+          h2 Join a session
+          p Enter a game code or scan QR to join existing game
+          label(for="code") Game code
+          div.code-input
+            input(type="text" id="code" name="code" placeholder="")
+            img(src="/images/scan.png" alt="Scan QR" class="scan-icon")
+          button.btn Join Session
+
+        .card.leaderboard
+          h2 Leaderboard
+          p The best of the best—can you beat them?
+          a.view(href="#") View my ranking
+          table
+            thead
+              tr
+                th Rank
+                th Player
+                th Score
+                th Time Taken (minutes)
+            tbody
+              tr
+                td 1
+                td winter
+                td 1507
+                td 10:08
+              tr
+                td 2
+                td Karina
+                td 1500
+                td 10:08
+              tr
+                td 3
+                td Jinyi
+                td 1495
+                td 10:08
+
+      section.right
+        .card.history
+          h2 Escape History
+          p Your past escape room sessions
+          ul
+            li
+              div.session-info
+                span.code HACK001
+                span.score 🏆 600
+              span.rank #1
+            li
+              div.session-info
+                span.code ESCP020
+                span.score 🏆 1050
+              span.rank #2
+          a.view(href="#") View all history

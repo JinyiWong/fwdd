@@ -1,0 +1,201 @@
+body {
+  margin: 0;
+  font-family: 'Kumbh Sans', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+  overflow: hidden;
+  position: relative;
+}
+
+/* === Background layers === */
+
+/* 1️⃣ Background image (40% transparency) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: url('/images/login_bg.webp') no-repeat center center/cover;
+  opacity: 0.4; /* 👈 only the image is semi-transparent */
+  z-index: 0;
+}
+
+/* 2️⃣ Full gradient overlay (solid) */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(180deg, #15002C 72%, #7A1A8D 100%);
+  z-index: -1;
+}
+
+/* === Header (logo + text side-by-side) === */
+.auth-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center; /* centers vertically */
+  gap: 0.6rem; /* space between logo and text */
+  padding: 1.5rem 3rem;
+}
+
+/* Container for logo + text */
+.logo {
+  display: flex;
+  align-items: center; /* align logo + text side by side */
+  gap: 0.5rem;
+}
+
+/* Logo image */
+.logo img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+/* Logo text */
+.logo h1 {
+  color: #e200ff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1; /* removes extra spacing */
+}
+
+/* === Auth box === */
+/* === Centering the entire Sign In box === */
+main.auth {
+  position: relative;
+  z-index: 2;
+  height: calc(100vh - 100px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+
+.auth-container {
+  background: rgba(21, 0, 44, 0.4);
+  border: 1px solid rgba(226, 0, 255, 0.4);
+  border-radius: 20px;
+  padding: 3rem 2.5rem;
+  width: 360px;
+  text-align: center;
+  box-shadow: 0 0 30px rgba(226, 0, 255, 0.3);
+}
+
+/* === Text === */
+.auth-container h2 {
+  color: #e200ff;
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+/* === Form === */
+.auth-container form {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* horizontally centers inputs and buttons */
+  width: 100%;
+}
+
+.form-group {
+  width: 100%; /* ensures equal width inside centered form */
+  text-align: left; /* keeps labels aligned properly */
+  margin-bottom: 1.2rem;
+}
+
+label {
+  display: block;
+  font-size: 0.9rem;
+  color: #ccc;
+  margin-bottom: 0.3rem;
+}
+
+input {
+  display: block;
+  width: 100%;
+  max-width: 93%; /* prevents overflow */
+  margin: 0 auto;  /* keeps them centered within their container */
+  padding: 0.8rem;
+  border-radius: 10px;
+  border: 1px solid rgba(226, 0, 255, 0.3);
+  background: rgba(21, 0, 44, 0.4);
+  color: #fff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border 0.3s, background 0.3s;
+}
+
+input:focus {
+  border-color: #e200ff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* === Forgot password === */
+.forgot {
+  display: inline-block;
+  color: #bbb;
+  font-size: 0.85rem;
+  margin-top: -0.5rem;
+  margin-bottom: 1.2rem;
+  text-align: right;
+  width: 100%;
+  text-decoration: none;
+  transition: color 0.3s;
+}
+
+.forgot:hover {
+  color: #e200ff;
+}
+
+/* === Button === */
+.button {
+  width: 100%;
+  background-color: #e200ff;
+  color: #fff;
+  padding: 0.9rem;
+  border-radius: 25px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 1rem;
+}
+
+.button:hover {
+  background-color: #fff;
+  color: #e200ff;
+}
+
+/* === Bottom link === */
+.register-text {
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+  color: #bbb;
+}
+
+.register-text a {
+  color: #e200ff;
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.register-text a:hover {
+  text-decoration: underline;
+}
+
+/* === Responsive === */
+@media (max-width: 480px) {
+  .auth-container {
+    width: 90%;
+    padding: 2.5rem 2rem;
+  }
+  .auth-header {
+    padding: 1rem 1.5rem;
+  }
+}

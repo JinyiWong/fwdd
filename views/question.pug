@@ -1,0 +1,23 @@
+extends layout/game.layout.pug
+
+block content
+  section.question-container
+    .card.question-box
+      h3 Question :
+      p In Python, what does the following code output?
+      pre print(len(["neon", "cyber", "hack"]))
+      .answers
+        button.answer-btn 4
+        button.answer-btn 2
+        button.answer-btn 3
+        button.answer-btn 1
+
+    .card.power-cards
+      h3 Power Cards Collected
+      p Power Cards give bonus points when used strategically
+      .power-card
+        img.icon(src="/images/power_double.png", alt="Power Card")
+        .power-info
+          strong Double Up
+          p Next correct answer = 2× points
+        button.small-btn Activate

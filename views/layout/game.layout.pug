@@ -1,0 +1,33 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Python Escape - In Game
+    link(rel="stylesheet", href="/css/game.css")
+    link(href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;600;700;800&display=swap", rel="stylesheet")
+
+  body
+    header.game-header
+      div.left-header
+        a.back(href="/dashboard")
+          img(src="/images/back.png", alt="Back", class="back-icon")
+          | Back
+
+        div.logo
+          img(src="/images/logo.png", alt="Python Escape Logo")
+          div.header-text
+            h1 Neon District
+            span Room 1 / 4
+
+      div.right-header
+        div.timer
+          img.icon(src="/images/clock.png", alt="Time")
+          span 01:30
+        div.score
+          img.icon(src="/images/medal.png", alt="Score")
+          span 200
+        a.leave-btn(href="/dashboard") Leave Game
+
+    main.game-container
+      block content

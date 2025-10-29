@@ -1,0 +1,23 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title Python Escape
+    link(rel="stylesheet", href="/css/index.css")
+    link(href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;600;700;800&display=swap", rel="stylesheet")
+  body
+    header.navbar
+      div.logo
+        img(src="/images/logo.png", alt="Python Escape Logo")
+        h1 Python Escape
+      nav.menu
+        ul
+          li: a(href="/") Home
+          li: a(href="/about") About
+          li: a(href="/signin") Sign In
+
+    block content
+
+    footer
+      p © 2025 Python Escape. All rights reserved.

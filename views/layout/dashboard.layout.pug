@@ -1,0 +1,27 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Python Escape Dashboard
+    link(rel="stylesheet", href="/css/tables.css")
+    link(href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;600;700;800&display=swap", rel="stylesheet")
+  body
+    header.dashboard-header
+      div.left-header
+        // 🔹 Back Button with image
+        a.back(href="/dashboard")
+          img(src="/images/back.png", alt="Back", class="back-icon")
+          | Back
+
+        div.logo
+          img(src="/images/logo.png", alt="Python Escape Logo")
+          div.header-text
+            h1 Python Escape
+            span Welcome, user
+
+      a.logout(href="/logout")
+        img(src="/images/logout.png", alt="Logout", class="logout-icon")
+        | LOGOUT
+    main.dashboard
+      block content

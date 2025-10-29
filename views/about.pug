@@ -1,0 +1,27 @@
+extends layout/landing.layout.pug
+
+block content
+  main.about
+    section.about-hero
+      h2 Python Escape
+      p Experience Python learning like never before through our cutting-edge escape room platform
+      a.button(href="/signin") Start Learning
+
+    section.features
+      .feature-grid
+        .feature-card
+          img(src="/images/logo.png", alt="Interactive Python Challenges")
+          h3 Interactive Python Challenges
+          p Master control flow, loops, and functions through hands-on coding puzzles.
+        .feature-card
+          img(src="/images/adaptive.png", alt="Adaptive Learning")
+          h3 Adaptive Learning
+          p Questions adapt to your skill level with detailed explanations for every concept.
+        .feature-card
+          img(src="/images/multiplayer.png", alt="Multiplayer Sessions")
+          h3 Multiplayer Sessions
+          p Team up with friends or compete solo in immersive escape room scenarios.
+        .feature-card
+          img(src="/images/achievement.png", alt="Achievement System")
+          h3 Achievement System
+          p Unlock power cards, collect rare items, and climb the leaderboards.

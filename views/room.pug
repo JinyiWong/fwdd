@@ -1,0 +1,51 @@
+extends layout/game.layout.pug
+
+block content
+  main.room-layout
+    section.left-column
+      .card.room-intro
+        img.room-img(src="/images/neon_room.jpg", alt="Room Image")
+        h2 Neon District
+        p The glowing streets where the game begins, full of hidden clues
+        button.leave-btn(type="button") Leave Game
+
+      .card.room-progress
+        h3 Room Progress
+        p Collect 2 required items to unlock the next room
+        .progress-bar
+          .progress(style="width: 50%")
+        p.progress-text 1 / 2
+        button.action-btn Scan QR Code
+
+      .card.power-cards
+        h3 Power Cards Collected
+        p Power Cards give bonus points when used strategically
+        .power-card
+          img.icon(src="/images/power_double.png", alt="Power Card")
+          .power-info
+            strong Double Up
+            p Next correct answer = 2× points
+          button.small-btn Activate
+
+    section.right-column
+      .card.items
+        h3 Discovered Items (1 / 2)
+        .item
+          div
+            strong Notebook
+            span.tag REQUIRED
+            p Contains the secrets
+          img.lock(src="/images/lock.png", alt="Locked")
+
+        .item.locked
+          div
+            strong ???
+            span.tag REQUIRED
+            p Scan QR to unlock
+          img.lock(src="/images/lock.png", alt="Locked")
+
+        .item.locked
+          div
+            strong ???
+            p Scan QR to unlock
+          img.lock(src="/images/lock.png", alt="Locked")

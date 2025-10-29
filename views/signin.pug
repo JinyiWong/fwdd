@@ -1,0 +1,22 @@
+extends layout/auth.layout.pug
+
+block content
+  main.auth
+    .auth-container
+      h2 Login
+      form(action="/signin" method="POST")
+        .form-group
+          label(for="email") Email
+          input(type="email" id="email" name="email" required placeholder="Enter your email")
+
+        .form-group
+          label(for="password") Password
+          input(type="password" id="password" name="password" required placeholder="Enter your password")
+
+        a.forgot(href="#") Forgot your password?
+
+        button.button(type="submit") Log In
+
+        p.register-text
+          | Don’t have an account?
+          a(href="/register") Register
