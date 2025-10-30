@@ -1,0 +1,59 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="UTF-8")
+    meta(name="viewport", content="width=device-width, initial-scale=1.0")
+    title Question Recap
+    link(rel="stylesheet", href="/css/question.recap.css")
+    link(href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;600;700;800&display=swap", rel="stylesheet")
+
+  body
+    header.dashboard-header
+      div.left-header
+        a.back(href="/results")
+          img(src="/images/back.png", alt="Back", class="back-icon")
+          | Back
+
+        div.logo
+          img(src="/images/logo.png", alt="Python Escape Logo")
+          div.header-text
+            h1 Question Recap
+            span Review question you have answered
+
+      a.logout(href="/logout")
+        img(src="/images/logout.png", alt="Logout", class="logout-icon")
+        | Back to Home
+
+    main.recap-container
+      .card.results-summary
+        h2 Congrats! You have escaped!
+        .stats-container
+          .stat
+            h3 1050
+            p Score
+          .stat
+            h3 30:08
+            p Time Taken
+          .stat
+            h3 15/16
+            p Items
+          .stat
+            h3 98%
+            p Accuracy
+
+      // Example repeated questions
+      each q in [1,2,3,4]
+        .card.question-card
+          h3 Question #{q}:
+          p.question-text In Python, what does the following code output?
+          pre.code-block print(len(["neon", "cyber", "hack"]))
+          
+          .answers
+            button.option.correct 3
+            button.option.wrong 2
+            button.option 4
+            button.option 1
+
+          .explanation
+            span.label explanation:
+            p len() returns the number of elements in the list, not the length of each string or the concatenated result.

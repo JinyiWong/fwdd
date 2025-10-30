@@ -57,6 +57,14 @@ app.get("/question", function (req, res) {
 res.render("question");
 });
 
+app.get("/result_lobby", function (req, res) {
+res.render("result_lobby");
+});
+
+app.get("/question_recap", function (req, res) {
+res.render("question_recap");
+});
+
 //6. Start the Server:
 const PORT = 3000;
 app.listen(PORT, () => {
