@@ -3,43 +3,143 @@ html(lang="en")
   head
     meta(charset="UTF-8")
     meta(name="viewport", content="width=device-width, initial-scale=1.0")
-    title Python Escape Dashboard
+    title Python Escape Lobby
     link(rel="stylesheet", href="/css/lobby.css")
     link(href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;600;700;800&display=swap", rel="stylesheet")
 
   body
+    // 🟣 Header
     header.dashboard-header
       div.left-header
-        a.back(href="/dashboard")
-          img(src="/images/back.png", alt="Back", class="back-icon")
-          | Back
-
         div.logo
           img(src="/images/logo.png", alt="Python Escape Logo")
           div.header-text
             h1 Python Escape
-            span Welcome, user
+            span Welcome, #{currentUser || 'user'}
 
       a.logout(href="/logout")
         img(src="/images/logout.png", alt="Logout", class="logout-icon")
-        | LOGOUT
+        |  LOGOUT
 
+    // 🟣 Main Lobby Section
     main.lobby-container
+      // LEFT SIDE — Game Info
       .lobby-left.card
         h2 Game Code
         p Share this code with others to join
-        .game-code-box HGYN987
-        img.qr-code(src="/images/qr.png", alt="QR Code")
-        p.small-text Scan to join session
-        button.action-btn(type="button") START GAME
 
+        if sessionCode
+          .game-code-box #{sessionCode}
+        else
+          .game-code-box Loading...
+
+        if qrCodeDataUrl
+          img.qr-code(src=qrCodeDataUrl, alt="QR Code")
+        else
+          img.qr-code(src="/images/qr-placeholder.png", alt="QR Code")
+
+        p.small-text Scan to join session
+
+        // ✅ Host controls
+        if isHost
+          form(action="/start-game" method="POST" style="margin-top:15px;")
+            input(type="hidden" name="sessionCode" value=sessionCode)
+            button.action-btn(type="submit") START GAME
+
+          // 🔴 End Game button
+          form(action="/end-session" method="POST" id="endGameForm" style="margin-top:10px;")
+            input(type="hidden" name="sessionCode" value=sessionCode)
+            button.action-btn-end(type="submit" style="background:#e91e63;") END GAME
+        else
+          // 🟠 Leave Game button for players
+          form(action="/leave-session" method="POST" id="leaveGameForm" style="margin-top:15px; text-align:center;")
+            input(type="hidden" name="sessionCode" value=sessionCode)
+            button.action-btn-end(type="submit" style="background:#ff9800;") LEAVE GAME
+
+          p(style="text-align:center; color:#bbb; margin-top:10px;") Waiting for host to start the game...
+
+      // RIGHT SIDE — Player List
       .lobby-right.card
-        h2 Connected Players (2)
+        h2 Connected Players 
+          span#playerCount (#{players && players.length ? players.length : 0})
         p Players in this session
-        .player-list
-          .player-item
-            span.player-name Spring_04
-            span.player-role.host Host
-          .player-item
-            span.player-name Wind_55
-            span.player-role Player
+
+        // ✅ Player list container (auto-updated)
+        .player-list#playerList
+          if players && players.length
+            each player, index in players
+              .player-item
+                span.player-name= player.name || player
+                if index === 0
+                  span.player-role.host Host
+                else
+                  span.player-role Player
+          else
+            p(style="color:#ccc") Waiting for players to join...
+
+    // 🟣 Script — auto refresh + confirmation dialogs
+    script.
+      const sessionCode = "#{sessionCode}";
+      const isHost = #{isHost ? 'true' : 'false'};
+
+      // 🔄 Auto-refresh every 3 seconds
+      async function fetchPlayers() {
+        try {
+          const res = await fetch(`/session-players/${sessionCode}`);
+          if (!res.ok) return;
+          const data = await res.json();
+          const list = document.getElementById('playerList');
+          const count = document.getElementById('playerCount');
+
+          list.innerHTML = '';
+          count.textContent = `(${data.players.length})`;
+
+          if (data.players.length === 0) {
+            list.innerHTML = '<p style="color:#ccc">Waiting for players to join...</p>';
+            return;
+          }
+
+          data.players.forEach((p, i) => {
+            const div = document.createElement('div');
+            div.classList.add('player-item');
+
+            const name = document.createElement('span');
+            name.classList.add('player-name');
+            name.textContent = p.name;
+
+            const role = document.createElement('span');
+            role.classList.add('player-role');
+            role.textContent = i === 0 ? 'Host' : 'Player';
+            if (i === 0) role.classList.add('host');
+
+            div.appendChild(name);
+            div.appendChild(role);
+            list.appendChild(div);
+          });
+        } catch (err) {
+          console.error('Error fetching players:', err);
+        }
+      }
+
+      // 🕒 Refresh player list periodically
+      setInterval(fetchPlayers, 3000);
+
+      // 🧩 Confirmation dialogs for Leave & End
+      document.addEventListener('DOMContentLoaded', () => {
+        const leaveForm = document.getElementById('leaveGameForm');
+        const endForm = document.getElementById('endGameForm');
+
+        if (leaveForm) {
+          leaveForm.addEventListener('submit', (e) => {
+            const confirmLeave = confirm("🚪 Are you sure you want to leave this game?");
+            if (!confirmLeave) e.preventDefault();
+          });
+        }
+
+        if (endForm) {
+          endForm.addEventListener('submit', (e) => {
+            const confirmEnd = confirm("⚠️ Are you sure you want to end this game for everyone?\nAll players will be disconnected.");
+            if (!confirmEnd) e.preventDefault();
+          });
+        }
+      });

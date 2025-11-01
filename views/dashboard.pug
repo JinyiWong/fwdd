@@ -6,33 +6,41 @@ html(lang="en")
     title Python Escape Dashboard
     link(rel="stylesheet", href="/css/dashboard.css")
     link(href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;600;700;800&display=swap", rel="stylesheet")
+
+    // ✅ Load Html5Qrcode from CDN
+    script(src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js")
+
   body
+    // 🟣 Header
     header.dashboard-header
       div.logo
         img(src="/images/logo.png", alt="Python Escape Logo")
         div.header-text
           h1 Python Escape
-          span Welcome, user
+          span Welcome, #{currentUser || 'user'}
 
       a.logout(href="/logout") 
         i(class="icon-logout")
         |  LOGOUT
 
+    // 🟣 Main Dashboard
     main.dashboard
       section.left
         .card.create-session
           h2 Create a new session
           p Start a new escape room session and invite others
-          button.btn Create Session
+          form(action="/create-session" method="POST")
+            button.btn(type="submit") Create Session
 
         .card.join-session
           h2 Join a session
           p Enter a game code or scan QR to join existing game
-          label(for="code") Game code
-          div.code-input
-            input(type="text" id="code" name="code" placeholder="")
-            img(src="/images/scan.png" alt="Scan QR" class="scan-icon")
-          button.btn Join Session
+          form(action="/join-session" method="POST")
+            label(for="code") Game code
+            div.code-input
+              input(type="text" id="code" name="code" placeholder="Enter game code" required)
+              img(src="/images/scan.png" alt="Scan QR" class="scan-icon" id="scanIcon" style="cursor:pointer")
+            button.btn(type="submit") Join Session
 
         .card.leaderboard
           h2 Leaderboard
@@ -78,3 +86,103 @@ html(lang="en")
                 span.score 🏆 1050
               span.rank #2
           a.view(href="#") View all history
+
+    // 🟣 Hidden scanner overlay
+    div#qrScannerContainer(style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; flex-direction:column; color:#fff;")
+      h2(style="margin-bottom:10px; font-weight:500") Scanning QR Code...
+      div#qrScanner(style="width:320px; height:320px; background:#000; border-radius:10px; overflow:hidden;")
+      button#closeScanner(style="margin-top:20px; padding:10px 25px; background:#e91e63; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;") Close Scanner
+
+    // 🧩 Enhanced QR Scanner Script (Auto join)
+    script.
+      document.addEventListener('DOMContentLoaded', () => {
+        console.log("✅ Page loaded, initializing QR scanner...");
+
+        // Wait a bit for the CDN to load
+        setTimeout(() => {
+          if (typeof Html5Qrcode === 'undefined') {
+            console.error("❌ Html5Qrcode library not loaded.");
+            alert("Error loading QR Scanner library. Please refresh.");
+            return;
+          }
+
+          console.log("✅ Html5Qrcode loaded successfully!");
+
+          const scanIcon = document.getElementById('scanIcon');
+          const qrContainer = document.getElementById('qrScannerContainer');
+          const closeBtn = document.getElementById('closeScanner');
+          let html5QrCode = null;
+          let isScanning = false;
+
+          // Open scanner
+          scanIcon.addEventListener('click', async () => {
+            if (isScanning) return;
+            qrContainer.style.display = 'flex';
+
+            try {
+              html5QrCode = new Html5Qrcode("qrScanner");
+              const cameras = await Html5Qrcode.getCameras();
+              if (!cameras || cameras.length === 0) throw new Error("No camera found");
+              const cameraId = cameras.length > 1 ? cameras[1].id : cameras[0].id;
+
+              await html5QrCode.start(
+                cameraId,
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                  console.log("✅ QR detected:", decodedText);
+                  
+                  // ✅ If QR contains full join URL, redirect immediately
+                  if (decodedText.startsWith("http://") || decodedText.startsWith("https://")) {
+                    stopScanner();
+                    window.location.href = decodedText;
+                    return;
+                  }
+
+                  // ✅ Otherwise treat it as session code
+                  document.getElementById('code').value = decodedText;
+                  stopScanner();
+
+                  // Optional: auto submit join form
+                  const form = document.querySelector('form[action="/join-session"]');
+                  if (form) form.submit();
+                },
+                (errorMessage) => {}
+              );
+
+              isScanning = true;
+              console.log("📸 QR scanner started");
+
+            } catch (err) {
+              console.error("❌ Camera error:", err);
+              alert(`Camera Error: ${err.message}`);
+              qrContainer.style.display = 'none';
+              isScanning = false;
+            }
+          });
+
+          // Close scanner
+          closeBtn.addEventListener('click', () => stopScanner());
+
+          // Stop scanner safely
+          function stopScanner() {
+            if (html5QrCode && isScanning) {
+              html5QrCode.stop()
+                .then(() => {
+                  console.log("🛑 Scanner stopped");
+                  qrContainer.style.display = 'none';
+                  isScanning = false;
+                  html5QrCode = null;
+                })
+                .catch((err) => {
+                  console.error("⚠️ Stop scanner error:", err);
+                  qrContainer.style.display = 'none';
+                  isScanning = false;
+                  html5QrCode = null;
+                });
+            } else {
+              qrContainer.style.display = 'none';
+              isScanning = false;
+            }
+          }
+        }, 200);
+      });

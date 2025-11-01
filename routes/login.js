@@ -3,14 +3,14 @@ const bcrypt = require('bcrypt');
 const router = express.Router();
 
 module.exports = (db) => {
-  // show login page
+  // 🟣 Show login page
   router.get('/login', (req, res) => {
     const error = req.session.error;
     req.session.error = null; // clear previous error
     return res.render('signin', { error });
   });
 
-  // handle login
+  // 🟣 Handle login
   router.post('/login', (req, res) => {
     const { email, password } = req.body;
 
@@ -27,7 +27,6 @@ module.exports = (db) => {
       }
 
       if (!results || results.length === 0) {
-        // No user found with that email
         return res.render('signin', { error: 'User does not exist!' });
       }
 
@@ -44,18 +43,19 @@ module.exports = (db) => {
           return res.render('signin', { error: 'Incorrect password!' });
         }
 
+        // ✅ FIXED HERE: must match your database column name
         req.session.loggedin = true;
         req.session.email = user.email;
-        req.session.user_id = user.id;
-        req.session.username = user.username;
+        req.session.user_id = user.user_id;   // ✅ correct field
+        req.session.user_name = user.username;
 
-        console.log('Login success:', user.username);
+        console.log('✅ Login success:', user.username, '| ID:', user.user_id);
         return res.redirect('/dashboard');
       });
     });
   });
 
-  // handle logout
+  // 🟣 Handle logout
   router.get('/logout', (req, res, next) => {
     if (!req.session) {
       return res.redirect('/');

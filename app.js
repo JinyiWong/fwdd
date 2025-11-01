@@ -41,7 +41,9 @@ app.set("view engine", "pug");
 // 6. Connect Routes (✅ after middleware)
 const loginRoutes = require("./routes/login")(db);
 const registerRoutes = require("./routes/register")(db);
+const sessionRoutes = require('./routes/session')(db);
 
+app.use("/", sessionRoutes);
 app.use("/", registerRoutes);
 app.use("/", loginRoutes);
 
@@ -55,7 +57,16 @@ app.get("/about", (req, res) => {
 });
 
 app.get("/register", (req, res) => res.render("register"));
-app.get("/dashboard", (req, res) => res.render("dashboard"));
+app.get("/dashboard", (req, res) => {
+  if (!req.session.loggedin) {
+    // If not logged in, redirect to login
+    return res.redirect("/login");
+  }
+
+  res.render("dashboard", {
+    currentUser: req.session.user_name || "user"
+  });
+});
 app.get("/leaderboard", (req, res) => res.render("leaderboard"));
 app.get("/history", (req, res) => res.render("history"));
 app.get("/results", (req, res) => res.render("results"));
