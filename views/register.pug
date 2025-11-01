@@ -7,19 +7,55 @@ block content
       form(action="/register" method="POST")
         .form-group
           label(for="username") Username
-          input(type="text" id="username" name="username" required placeholder="")
+          input(type="text" id="username" name="username" value=(username || ''))
+          if errors && errors.username
+            p.error-message(style="color:red")= errors.username
+
         .form-group
           label(for="email") Email
-          input(type="email" id="email" name="email" required placeholder="")
-        .form-group
+          input(type="email" id="email" name="email" value=(email || ''))
+          if errors && errors.email
+            p.error-message(style="color:red")= errors.email
+
+        .form-group.password-group
           label(for="password") Password
-          input(type="password" id="password" name="password" required placeholder="")
-        .form-group
+          .password-wrapper
+            input(type="password" id="password" name="password")
+            button(type="button" class="toggle-password" onclick="togglePassword('password', this)")
+              i(class="fa fa-eye")
+          if errors && errors.password
+            p.error-message(style="color:red")= errors.password
+
+        .form-group.password-group
           label(for="confirmPassword") Confirm Password
-          input(type="password" id="confirmPassword" name="confirmPassword" required placeholder="")
+          .password-wrapper
+            input(type="password" id="confirmPassword" name="confirmPassword")
+            button(type="button" class="toggle-password" onclick="togglePassword('confirmPassword', this)")
+              i(class="fa fa-eye")
+          if errors && errors.confirmPassword
+            p.error-message(style="color:red")= errors.confirmPassword
+
+        if errors && errors.general
+          p.error-message(style="color:red")= errors.general
+
+        button.button(type="submit") Register
 
         p.register-text
           | Already have an account?
-          a(href="/signin")  Sign In
+          a(href="/login") Sign In
 
-        button.button(type="submit") Register
+    // Password toggle JS
+    script.
+      function togglePassword(fieldId, btn) {
+        const field = document.getElementById(fieldId);
+        const icon = btn.querySelector('i');
+        if (field.type === 'password') {
+          field.type = 'text';
+          icon.classList.remove('fa-eye');
+          icon.classList.add('fa-eye-slash');
+        } else {
+          field.type = 'password';
+          icon.classList.remove('fa-eye-slash');
+          icon.classList.add('fa-eye');
+        }
+      }

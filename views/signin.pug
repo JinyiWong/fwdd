@@ -4,7 +4,12 @@ block content
   main.auth
     .auth-container
       h2 Login
-      form(action="/signin" method="POST")
+
+      // ✅ Show error message if it exists
+      if error
+        p.error-message(style="color:red; margin-bottom:10px;")= error
+
+      form(action="/login" method="POST")
         .form-group
           label(for="email") Email
           input(type="email" id="email" name="email" required placeholder="Enter your email")
