@@ -9,6 +9,7 @@ block content
       // Hidden fields for backend
       input(type="hidden" id="questionId" value=question.question_id)
       input(type="hidden" id="itemId" value=item.item_id)
+      input(type="hidden" id="roomId" value=item.room_id)
 
       .answers
         button.answer-btn(data-option="A")= question.option_a
@@ -26,6 +27,19 @@ block content
           p Next correct answer = 2× points
         button.small-btn Activate
 
+  // 🟣 Custom popup panel
+  div#popupPanel(
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center; flex-direction:column; color:#fff; font-family:'Kumbh Sans'; text-align:center; padding:20px;"
+  )
+    .popup-card(
+      style="background:#222; padding:30px 40px; border-radius:15px; box-shadow:0 0 25px rgba(255,255,255,0.3); max-width:450px;"
+    )
+      h2#popupTitle(style="margin-bottom:15px; font-size:24px; font-weight:700") Result
+      p#popupMsg(style="margin-bottom:25px; font-size:18px; line-height:1.5")
+      button#popupBtn(
+        style="padding:10px 25px; background:#4caf50; color:#fff; border:none; border-radius:8px; font-size:16px; cursor:pointer;"
+      ) OK
+
   // 🧩 Interactive Script
   script.
     // Timer start
@@ -39,12 +53,31 @@ block content
       });
     }
 
+    // 🟡 Custom popup function
+    function showPopup(title, message, callback, color = '#4caf50') {
+      const popup = document.getElementById('popupPanel');
+      const titleEl = document.getElementById('popupTitle');
+      const msgEl = document.getElementById('popupMsg');
+      const btn = document.getElementById('popupBtn');
+
+      titleEl.textContent = title;
+      msgEl.textContent = message;
+      btn.style.background = color;
+
+      popup.style.display = 'flex';
+      btn.onclick = () => {
+        popup.style.display = 'none';
+        if (callback) callback();
+      };
+    }
+
     document.querySelectorAll('.answer-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         disableButtons();
         const selected = btn.dataset.option;
         const questionId = document.getElementById('questionId').value;
         const itemId = document.getElementById('itemId').value;
+        const roomId = document.getElementById('roomId').value;
         const timeTaken = Math.floor((Date.now() - startTime) / 1000);
 
         try {
@@ -56,32 +89,24 @@ block content
 
           const data = await res.json();
 
-          // ✅ Show feedback
-          let msg = data.message;
+          // ✅ Handle success or error visually
+          let msg = data.message || '';
           if (data.bonusMarks && data.bonusMarks > 0)
             msg += ` 🏅 Bonus +${data.bonusMarks} marks!`;
 
-          alert(msg);
+          // ✅ Decide popup style
+          const color = data.isCorrect ? '#4caf50' : '#f44336';
+          const title = data.isCorrect ? '✅ Correct!' : '❌ Wrong!';
 
-          // ✅ If player unlocked next room
-          if (data.roomUnlocked) {
-            alert('🎉 You’ve collected all required items for this room! Proceed to the next room!');
-            setTimeout(() => {
-              window.location.href = '/room/next'; // next room route
-            }, 2000);
-            return;
-          }
-
-          // ✅ If just correct (but not room unlock)
-          if (data.success && data.isCorrect) {
-            setTimeout(() => {
-              window.location.href = '/lobby'; // return to lobby or item list
-            }, 1500);
-          }
+          // ✅ Redirect logic after popup closes
+          showPopup(title, msg, () => {
+            // Always redirect back to the room they were in
+            window.location.href = `/room/${roomId}`;
+          }, color);
 
         } catch (err) {
           console.error('❌ Error submitting answer:', err);
-          alert('Server error while submitting answer.');
+          showPopup('Error', 'Server error while submitting your answer.', null, '#ff9800');
         }
       });
     });

@@ -33,6 +33,8 @@ app.use(
     saveUninitialized: true,
   })
 );
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // 5. Set Up View Engine
 app.set("views", path.join(__dirname, "views"));

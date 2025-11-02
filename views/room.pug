@@ -81,14 +81,20 @@ block content
       // 🔁 Progress Refresh
       async function refreshProgress() {
         try {
+          // ✅ Safe DOM check — avoid null reference when leaving page
+          const bar = document.getElementById('progressBar');
+          if (!bar) return; // stop if element missing (e.g., on question page)
+
           const res = await fetch(`/room/${roomId}/progress`);
           const data = await res.json();
           if (!data.success) return;
 
-          document.getElementById('progressBar').style.width = data.progressPercent + '%';
+          // Update progress bar + text
+          bar.style.width = data.progressPercent + '%';
           document.getElementById('progressCount').textContent =
             `${data.collectedRequired} / ${data.totalRequired}`;
 
+          // Update items dynamically
           const list = document.getElementById('itemList');
           list.innerHTML = '';
           data.items.forEach(item => {
@@ -109,6 +115,7 @@ block content
           document.getElementById('itemHeader').textContent =
             `Discovered Items (${data.collectedRequired} / ${data.items.length})`;
 
+          // Add next-room button when completed
           if (data.progressPercent === 100 && !document.getElementById('nextRoomBtn')) {
             const btn = document.createElement('button');
             btn.id = 'nextRoomBtn';
@@ -123,7 +130,10 @@ block content
           console.error('Refresh failed:', err);
         }
       }
-      setInterval(refreshProgress, 5000);
+
+      // Interval with cleanup
+      const refreshInterval = setInterval(refreshProgress, 5000);
+      window.addEventListener('beforeunload', () => clearInterval(refreshInterval));
 
       // 🎯 QR Scanner Logic
       const scanBtn = document.getElementById('scanBtn');
@@ -170,12 +180,10 @@ block content
             async (decodedText) => {
               stopScanner();
 
-              // ✅ Handle scanned QR
               if (decodedText.includes('/item/')) {
                 const itemId = decodedText.split('/item/')[1];
                 try {
                   const res = await fetch(`/item/${itemId}`);
-                  // Try to detect JSON (error), otherwise assume success (HTML)
                   const text = await res.text();
                   try {
                     const data = JSON.parse(text);
@@ -184,7 +192,7 @@ block content
                       return;
                     }
                   } catch {
-                    // Not JSON → means backend rendered the question page
+                    // Backend returned HTML (valid question page)
                     document.open();
                     document.write(text);
                     document.close();
