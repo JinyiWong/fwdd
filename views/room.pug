@@ -4,18 +4,22 @@ block content
   main.room-layout
     section.left-column
       .card.room-intro
-        img.room-img(src="/images/neon_room.jpg", alt="Room Image")
-        h2 Neon District
-        p The glowing streets where the game begins, full of hidden clues
-        button.leave-btn(type="button") Leave Game
+        img.room-img(src=room.room_image, alt="Room Image", id="roomImage")
+        h2#roomName= room.room_name
+        p#roomDesc= room.room_description || 'Explore the room and find hidden items.'
+        button.leave-btn(type="button", id="leaveBtn") Leave Game
+        form#leaveForm(action="/leave-session", method="POST" style="display:none")
+          input(type="hidden" name="sessionCode" value=sessionCode)
 
       .card.room-progress
         h3 Room Progress
-        p Collect 2 required items to unlock the next room
+        p#progressText Collect #{totalRequired} required item(s) to unlock the next room
         .progress-bar
-          .progress(style="width: 50%")
-        p.progress-text 1 / 2
-        button.action-btn Scan QR Code
+          .progress#progressBar(style="width: #{progressPercent}%")
+        p.progress-text#progressCount #{collectedRequired} / #{totalRequired}
+        button.action-btn(type="button", id="scanBtn") Scan QR Code
+        if progressPercent === 100
+          button.next-room-btn#nextRoomBtn(type="button", data-next-room=(room.room_id + 1)) Proceed to Next Room →
 
       .card.power-cards
         h3 Power Cards Collected
@@ -25,27 +29,190 @@ block content
           .power-info
             strong Double Up
             p Next correct answer = 2× points
-          button.small-btn Activate
+          button.small-btn(type="button") Activate
 
     section.right-column
       .card.items
-        h3 Discovered Items (1 / 2)
-        .item
-          div
-            strong Notebook
-            span.tag REQUIRED
-            p Contains the secrets
-          img.lock(src="/images/lock.png", alt="Locked")
+        h3#itemHeader Discovered Items (#{collectedRequired} / #{items.length})
+        #itemList
+          each item in items
+            - const isCollected = collectedIds.includes(item.item_id);
+            .item(class=isCollected ? '' : 'locked')
+              div
+                strong= item.item_name || '???'
+                if item.is_required
+                  span.tag REQUIRED
+                p= isCollected ? item.item_description : 'Scan QR to unlock'
+              if isCollected
+                img.lock(src="/images/unlock.png", alt="Unlocked")
+              else
+                img.lock(src="/images/lock.png", alt="Locked")
 
-        .item.locked
-          div
-            strong ???
-            span.tag REQUIRED
-            p Scan QR to unlock
-          img.lock(src="/images/lock.png", alt="Locked")
+  // 🔒 Scanner overlay
+  div#qrScannerContainer(style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; flex-direction:column; color:#fff; transition:opacity 0.3s;")
+    h2(style="margin-bottom:10px; font-weight:500") Scanning Item QR Code...
+    div#qrScanner(style="width:320px; height:320px; background:#000; border-radius:10px; overflow:hidden; box-shadow:0 0 15px rgba(255,255,255,0.3);")
+    button#closeScanner(style="margin-top:20px; padding:10px 25px; background:#e91e63; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;") Close Scanner
 
-        .item.locked
-          div
-            strong ???
-            p Scan QR to unlock
-          img.lock(src="/images/lock.png", alt="Locked")
+  // ✅ QR library
+  script(src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js")
+
+  // 🧠 Page logic
+  script.
+    (function() {
+      const roomId = #{room.room_id};
+
+      // Leave Game
+      document.getElementById('leaveBtn').addEventListener('click', () => {
+        if (confirm('Are you sure you want to leave the game?')) {
+          document.getElementById('leaveForm').submit();
+        }
+      });
+
+      // Next Room
+      const nextBtn = document.getElementById('nextRoomBtn');
+      if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+          const nextRoomId = nextBtn.dataset.nextRoom;
+          if (nextRoomId) window.location.href = '/room/' + nextRoomId;
+        });
+      }
+
+      // 🔁 Progress Refresh
+      async function refreshProgress() {
+        try {
+          const res = await fetch(`/room/${roomId}/progress`);
+          const data = await res.json();
+          if (!data.success) return;
+
+          document.getElementById('progressBar').style.width = data.progressPercent + '%';
+          document.getElementById('progressCount').textContent =
+            `${data.collectedRequired} / ${data.totalRequired}`;
+
+          const list = document.getElementById('itemList');
+          list.innerHTML = '';
+          data.items.forEach(item => {
+            const collected = data.collectedIds.includes(item.item_id);
+            const div = document.createElement('div');
+            div.className = collected ? 'item' : 'item locked';
+            div.innerHTML = `
+              <div>
+                <strong>${item.item_name || '???'}</strong>
+                ${item.is_required ? '<span class="tag">REQUIRED</span>' : ''}
+                <p>${collected ? item.item_description : 'Scan QR to unlock'}</p>
+              </div>
+              <img class="lock" src="/images/${collected ? 'unlock' : 'lock'}.png" alt="${collected ? 'Unlocked' : 'Locked'}" />
+            `;
+            list.appendChild(div);
+          });
+
+          document.getElementById('itemHeader').textContent =
+            `Discovered Items (${data.collectedRequired} / ${data.items.length})`;
+
+          if (data.progressPercent === 100 && !document.getElementById('nextRoomBtn')) {
+            const btn = document.createElement('button');
+            btn.id = 'nextRoomBtn';
+            btn.className = 'next-room-btn';
+            btn.textContent = 'Proceed to Next Room →';
+            btn.addEventListener('click', () => {
+              window.location.href = '/room/' + (roomId + 1);
+            });
+            document.querySelector('.room-progress').appendChild(btn);
+          }
+        } catch (err) {
+          console.error('Refresh failed:', err);
+        }
+      }
+      setInterval(refreshProgress, 5000);
+
+      // 🎯 QR Scanner Logic
+      const scanBtn = document.getElementById('scanBtn');
+      const qrContainer = document.getElementById('qrScannerContainer');
+      const closeBtn = document.getElementById('closeScanner');
+      let html5QrCode = null;
+      let isScanning = false;
+
+      function stopScanner() {
+        if (html5QrCode && isScanning) {
+          html5QrCode.stop().then(() => {
+            qrContainer.style.opacity = 0;
+            setTimeout(() => (qrContainer.style.display = 'none'), 200);
+            html5QrCode = null;
+            isScanning = false;
+          }).catch(() => {
+            qrContainer.style.opacity = 0;
+            setTimeout(() => (qrContainer.style.display = 'none'), 200);
+            html5QrCode = null;
+            isScanning = false;
+          });
+        } else {
+          qrContainer.style.opacity = 0;
+          setTimeout(() => (qrContainer.style.display = 'none'), 200);
+          isScanning = false;
+        }
+      }
+
+      scanBtn.addEventListener('click', async () => {
+        if (isScanning) return;
+        qrContainer.style.display = 'flex';
+        qrContainer.style.opacity = 1;
+
+        try {
+          if (typeof Html5Qrcode === 'undefined') throw new Error('QR library not loaded');
+          html5QrCode = new Html5Qrcode("qrScanner");
+          const cameras = await Html5Qrcode.getCameras();
+          if (!cameras || cameras.length === 0) throw new Error('No camera found');
+          const cameraId = cameras.length > 1 ? cameras[1].id : cameras[0].id;
+
+          await html5QrCode.start(
+            cameraId,
+            { fps: 10, qrbox: { width: 250, height: 250 } },
+            async (decodedText) => {
+              stopScanner();
+
+              // ✅ Handle scanned QR
+              if (decodedText.includes('/item/')) {
+                const itemId = decodedText.split('/item/')[1];
+                try {
+                  const res = await fetch(`/item/${itemId}`);
+                  // Try to detect JSON (error), otherwise assume success (HTML)
+                  const text = await res.text();
+                  try {
+                    const data = JSON.parse(text);
+                    if (!data.success) {
+                      alert(data.message);
+                      return;
+                    }
+                  } catch {
+                    // Not JSON → means backend rendered the question page
+                    document.open();
+                    document.write(text);
+                    document.close();
+                  }
+                } catch (err) {
+                  alert('❌ Failed to process item. Please try again.');
+                }
+                return;
+              }
+
+              if (/^[0-9]+$/.test(decodedText)) {
+                window.location.href = '/item/' + decodedText;
+                return;
+              }
+
+              alert('Invalid QR code. Please scan an item QR.');
+            },
+            () => {}
+          );
+
+          isScanning = true;
+        } catch (err) {
+          console.error('Camera error:', err);
+          alert('Camera error: ' + (err && err.message ? err.message : err));
+          qrContainer.style.display = 'none';
+          isScanning = false;
+        }
+      });
+
+      closeBtn.addEventListener('click', stopScanner);
+    })();
