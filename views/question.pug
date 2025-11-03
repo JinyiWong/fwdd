@@ -20,14 +20,10 @@ block content
     .card.power-cards
       h3 Power Cards Collected
       p Power Cards give bonus points when used strategically
-      .power-card
-        img.icon(src="/images/power_double.png", alt="Power Card")
-        .power-info
-          strong Double Up
-          p Next correct answer = 2× points
-        button.small-btn Activate
+      #powerCardList
+        p(style="color:#aaa;") Loading your power cards...
 
-  // 🟣 Custom popup panel
+  // 🟣 Popup for results
   div#popupPanel(
     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center; flex-direction:column; color:#fff; font-family:'Kumbh Sans'; text-align:center; padding:20px;"
   )
@@ -40,73 +36,161 @@ block content
         style="padding:10px 25px; background:#4caf50; color:#fff; border:none; border-radius:8px; font-size:16px; cursor:pointer;"
       ) OK
 
-  // 🧩 Interactive Script
+  // ❄️ Freeze overlay
+  div#freezeOverlay(
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9998; justify-content:center; align-items:center; flex-direction:column; color:#fff; font-family:'Kumbh Sans'; font-size:2rem; font-weight:700; letter-spacing:1px;"
+  )
+    | 🧊 Frozen... Please wait ⏳
+
+  // 🧠 Interactive Script
   script.
-    // Timer start
-    let startTime = Date.now();
+    (function() {
+      let startTime = Date.now();
 
-    // Helper: Disable buttons to prevent double submit
-    function disableButtons() {
+      // Disable all answer buttons
+      function disableButtons() {
+        document.querySelectorAll('.answer-btn').forEach(btn => {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+        });
+      }
+
+      // 🟢 Popup helper
+      function showPopup(title, message, callback, color = '#4caf50') {
+        const popup = document.getElementById('popupPanel');
+        const titleEl = document.getElementById('popupTitle');
+        const msgEl = document.getElementById('popupMsg');
+        const btn = document.getElementById('popupBtn');
+
+        titleEl.textContent = title;
+        msgEl.textContent = message;
+        btn.style.background = color;
+
+        popup.style.display = 'flex';
+        setTimeout(() => {
+          popup.style.display = 'none';
+          if (callback) callback();
+        }, 2000);
+      }
+
+      // ======= Submit Answer =======
       document.querySelectorAll('.answer-btn').forEach(btn => {
-        btn.disabled = true;
-        btn.style.opacity = '0.5';
+        btn.addEventListener('click', async () => {
+          disableButtons();
+          const selected = btn.dataset.option;
+          const questionId = document.getElementById('questionId').value;
+          const itemId = document.getElementById('itemId').value;
+          const roomId = document.getElementById('roomId').value;
+          const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+
+          try {
+            const res = await fetch('/submit-answer', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ questionId, selectedOption: selected, timeTaken, itemId })
+            });
+
+            const data = await res.json();
+            let msg = data.message || '';
+            if (data.bonusMarks && data.bonusMarks > 0)
+              msg += ` 🏅 Bonus +${data.bonusMarks} marks!`;
+
+            const color = data.isCorrect ? '#4caf50' : '#f44336';
+            const title = data.isCorrect ? '✅ Correct!' : '❌ Wrong!';
+
+            showPopup(title, msg, () => {
+              window.location.href = `/room/${roomId}`;
+            }, color);
+
+          } catch (err) {
+            console.error('❌ Error submitting answer:', err);
+            showPopup('Error', 'Server error while submitting your answer.', null, '#ff9800');
+          }
+        });
       });
-    }
 
-    // 🟡 Custom popup function
-    function showPopup(title, message, callback, color = '#4caf50') {
-      const popup = document.getElementById('popupPanel');
-      const titleEl = document.getElementById('popupTitle');
-      const msgEl = document.getElementById('popupMsg');
-      const btn = document.getElementById('popupBtn');
+      // ======= Load Power Cards =======
+      async function loadPowerCards() {
+        try {
+          const res = await fetch('/power-cards');
+          const data = await res.json();
+          const container = document.getElementById('powerCardList');
+          container.innerHTML = '';
 
-      titleEl.textContent = title;
-      msgEl.textContent = message;
-      btn.style.background = color;
+          if (!data.hasCards || !data.powerCards.length) {
+            container.innerHTML = '<p style="color:#aaa;">No power cards collected yet.</p>';
+            return;
+          }
 
-      popup.style.display = 'flex';
-      btn.onclick = () => {
-        popup.style.display = 'none';
-        if (callback) callback();
-      };
-    }
+          data.powerCards.forEach(card => {
+            const div = document.createElement('div');
+            div.className = 'power-card';
+            div.innerHTML = `
+              <img class="icon" src="/images/power_${card.power_card_type.toLowerCase()}.png" alt="${card.power_card_type}" />
+              <div class="power-info">
+                <strong>${card.power_card_type}</strong>
+              </div>
+            `;
+            const btn = document.createElement('button');
+            if (card.is_activated === 1) {
+              btn.textContent = 'Used';
+              btn.disabled = true;
+              btn.className = 'small-btn used';
+              btn.style.opacity = '0.6';
+            } else {
+              btn.textContent = 'Activate';
+              btn.className = 'small-btn';
+              btn.addEventListener('click', () => activatePowerCard(card.power_card_type));
+            }
+            div.appendChild(btn);
+            container.appendChild(div);
+          });
+        } catch (err) {
+          console.error('Error loading power cards:', err);
+        }
+      }
 
-    document.querySelectorAll('.answer-btn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        disableButtons();
-        const selected = btn.dataset.option;
-        const questionId = document.getElementById('questionId').value;
-        const itemId = document.getElementById('itemId').value;
-        const roomId = document.getElementById('roomId').value;
-        const timeTaken = Math.floor((Date.now() - startTime) / 1000);
+      // ======= Activate Power Card =======
+      async function activatePowerCard(type) {
+        const confirmUse = confirm(`Activate \${type} power card?`);
+        if (!confirmUse) return;
 
         try {
-          const res = await fetch('/submit-answer', {
+          const res = await fetch('/activate-power-card', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ questionId, selectedOption: selected, timeTaken, itemId })
+            body: JSON.stringify({ type })
           });
-
-          const data = await res.json();
-
-          // ✅ Handle success or error visually
-          let msg = data.message || '';
-          if (data.bonusMarks && data.bonusMarks > 0)
-            msg += ` 🏅 Bonus +${data.bonusMarks} marks!`;
-
-          // ✅ Decide popup style
-          const color = data.isCorrect ? '#4caf50' : '#f44336';
-          const title = data.isCorrect ? '✅ Correct!' : '❌ Wrong!';
-
-          // ✅ Redirect logic after popup closes
-          showPopup(title, msg, () => {
-            // Always redirect back to the room they were in
-            window.location.href = `/room/${roomId}`;
-          }, color);
-
+          const result = await res.json();
+          alert(result.message);
+          await loadPowerCards();
         } catch (err) {
-          console.error('❌ Error submitting answer:', err);
-          showPopup('Error', 'Server error while submitting your answer.', null, '#ff9800');
+          alert('⚠️ Error activating card.');
         }
-      });
-    });
+      }
+
+      loadPowerCards();
+
+      // ======= 🔄 Check Freeze Status (every 2s) =======
+      async function checkFreezeStatus() {
+        try {
+          const res = await fetch('/session/freeze-status');
+          const data = await res.json();
+          const overlay = document.getElementById('freezeOverlay');
+
+          if (data.frozen) {
+            document.body.style.pointerEvents = 'none';
+            document.body.style.opacity = '0.5';
+            overlay.style.display = 'flex';
+          } else {
+            document.body.style.pointerEvents = 'auto';
+            document.body.style.opacity = '1';
+            overlay.style.display = 'none';
+          }
+        } catch (err) {
+          console.error('Freeze check failed:', err);
+        }
+      }
+
+      setInterval(checkFreezeStatus, 2000);
+    })();

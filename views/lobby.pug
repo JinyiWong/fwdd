@@ -46,12 +46,10 @@ html(lang="en")
             input(type="hidden" name="sessionCode" value=sessionCode)
             button.action-btn(type="submit") START GAME
 
-          // 🔴 End Game button
           form(action="/end-session" method="POST" id="endGameForm" style="margin-top:10px;")
             input(type="hidden" name="sessionCode" value=sessionCode)
             button.action-btn-end(type="submit" style="background:#e91e63;") END GAME
         else
-          // 🟠 Leave Game button for players
           form(action="/leave-session" method="POST" id="leaveGameForm" style="margin-top:15px; text-align:center;")
             input(type="hidden" name="sessionCode" value=sessionCode)
             button.action-btn-end(type="submit" style="background:#ff9800;") LEAVE GAME
@@ -64,7 +62,6 @@ html(lang="en")
           span#playerCount (#{players && players.length ? players.length : 0})
         p Players in this session
 
-        // ✅ Player list container (auto-updated)
         .player-list#playerList
           if players && players.length
             each player, index in players
@@ -77,20 +74,20 @@ html(lang="en")
           else
             p(style="color:#ccc") Waiting for players to join...
 
-    // 🟣 Script — auto refresh + confirmation dialogs
+    // 🧠 Script — auto refresh + game sync
     script.
       const sessionCode = "#{sessionCode}";
       const isHost = #{isHost ? 'true' : 'false'};
 
-      // 🔄 Auto-refresh every 3 seconds
+      // 🔁 Refresh player list every 3s
       async function fetchPlayers() {
         try {
           const res = await fetch(`/session-players/${sessionCode}`);
           if (!res.ok) return;
           const data = await res.json();
+
           const list = document.getElementById('playerList');
           const count = document.getElementById('playerCount');
-
           list.innerHTML = '';
           count.textContent = `(${data.players.length})`;
 
@@ -102,18 +99,12 @@ html(lang="en")
           data.players.forEach((p, i) => {
             const div = document.createElement('div');
             div.classList.add('player-item');
-
-            const name = document.createElement('span');
-            name.classList.add('player-name');
-            name.textContent = p.name;
-
-            const role = document.createElement('span');
-            role.classList.add('player-role');
-            role.textContent = i === 0 ? 'Host' : 'Player';
-            if (i === 0) role.classList.add('host');
-
-            div.appendChild(name);
-            div.appendChild(role);
+            div.innerHTML = `
+              <span class="player-name">${p.name}</span>
+              <span class="player-role ${i === 0 ? 'host' : ''}">
+                ${i === 0 ? 'Host' : 'Player'}
+              </span>
+            `;
             list.appendChild(div);
           });
         } catch (err) {
@@ -124,22 +115,37 @@ html(lang="en")
       // 🕒 Refresh player list periodically
       setInterval(fetchPlayers, 3000);
 
-      // 🧩 Confirmation dialogs for Leave & End
+      // ⚙️ Confirmations for leave / end
       document.addEventListener('DOMContentLoaded', () => {
         const leaveForm = document.getElementById('leaveGameForm');
         const endForm = document.getElementById('endGameForm');
 
         if (leaveForm) {
-          leaveForm.addEventListener('submit', (e) => {
-            const confirmLeave = confirm("🚪 Are you sure you want to leave this game?");
-            if (!confirmLeave) e.preventDefault();
+          leaveForm.addEventListener('submit', e => {
+            if (!confirm("🚪 Are you sure you want to leave this game?")) e.preventDefault();
           });
         }
 
         if (endForm) {
-          endForm.addEventListener('submit', (e) => {
-            const confirmEnd = confirm("⚠️ Are you sure you want to end this game for everyone?\nAll players will be disconnected.");
-            if (!confirmEnd) e.preventDefault();
+          endForm.addEventListener('submit', e => {
+            if (!confirm("⚠️ Are you sure you want to end this game for everyone?")) e.preventDefault();
           });
+        }
+
+        // 🟢 For players only — auto redirect when host starts
+        if (!isHost) {
+          async function checkGameStart() {
+            try {
+              const res = await fetch(`/session/${sessionCode}/status`);
+              const data = await res.json();
+              if (data.success && data.started) {
+                console.log("🎮 Game started by host!");
+                window.location.href = "/room/1";
+              }
+            } catch (err) {
+              console.error("Error checking session start:", err);
+            }
+          }
+          setInterval(checkGameStart, 2000); // Poll every 2 seconds
         }
       });

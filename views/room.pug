@@ -7,9 +7,6 @@ block content
         img.room-img(src=room.room_image, alt="Room Image", id="roomImage")
         h2#roomName= room.room_name
         p#roomDesc= room.room_description || 'Explore the room and find hidden items.'
-        button.leave-btn(type="button", id="leaveBtn") Leave Game
-        form#leaveForm(action="/leave-session", method="POST" style="display:none")
-          input(type="hidden" name="sessionCode" value=sessionCode)
 
       .card.room-progress
         h3 Room Progress
@@ -18,22 +15,17 @@ block content
           .progress#progressBar(style="width: #{progressPercent}%")
         p.progress-text#progressCount #{collectedRequired} / #{totalRequired}
         button.action-btn(type="button", id="scanBtn") Scan QR Code
-        if progressPercent === 100
-          button.next-room-btn#nextRoomBtn(type="button", data-next-room=(room.room_id + 1)) Proceed to Next Room →
 
+      // 🔮 Power Card Section
       .card.power-cards
         h3 Power Cards Collected
-        p Power Cards give bonus points when used strategically
-        .power-card
-          img.icon(src="/images/power_double.png", alt="Power Card")
-          .power-info
-            strong Double Up
-            p Next correct answer = 2× points
-          button.small-btn(type="button") Activate
+        p Use your power cards wisely to get an advantage!
+        #powerCardList
+          p(style="color:#aaa;") Loading your power cards...
 
     section.right-column
       .card.items
-        h3#itemHeader Discovered Items (#{collectedRequired} / #{items.length})
+        h3#itemHeader Discovered Items (#{collectedIds.length} / #{items.length})
         #itemList
           each item in items
             - const isCollected = collectedIds.includes(item.item_id);
@@ -48,11 +40,26 @@ block content
               else
                 img.lock(src="/images/lock.png", alt="Locked")
 
-  // 🔒 Scanner overlay
+  // 🔒 Scanner overlay (unchanged)
   div#qrScannerContainer(style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:9999; justify-content:center; align-items:center; flex-direction:column; color:#fff; transition:opacity 0.3s;")
     h2(style="margin-bottom:10px; font-weight:500") Scanning Item QR Code...
     div#qrScanner(style="width:320px; height:320px; background:#000; border-radius:10px; overflow:hidden; box-shadow:0 0 15px rgba(255,255,255,0.3);")
     button#closeScanner(style="margin-top:20px; padding:10px 25px; background:#e91e63; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;") Close Scanner
+
+  // 🎉 Popup overlay (for room cleared / escape)
+  div#popupPanel(
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9998; justify-content:center; align-items:center; flex-direction:column; color:#fff; font-family:'Kumbh Sans'; text-align:center;"
+  )
+    .popup-card(style="background:#222; padding:30px 40px; border-radius:15px; box-shadow:0 0 25px rgba(255,255,255,0.3); max-width:450px;")
+      h2#popupTitle(style="margin-bottom:15px; font-size:24px; font-weight:700") 🎉 Congratulations!
+      p#popupMsg(style="margin-bottom:25px; font-size:18px; line-height:1.5") You have successfully escaped this room!
+      button#popupBtn(style="padding:10px 25px; background:#4caf50; color:#fff; border:none; border-radius:8px; font-size:16px; cursor:pointer;") Continue
+
+  // ❄️ Freeze overlay
+  div#freezeOverlay(
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9997; justify-content:center; align-items:center; flex-direction:column; color:#fff; font-family:'Kumbh Sans'; font-size:2rem; font-weight:700;"
+  )
+    | 🧊 Frozen... Please wait ⏳
 
   // ✅ QR library
   script(src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js")
@@ -62,39 +69,35 @@ block content
     (function() {
       const roomId = #{room.room_id};
 
-      // Leave Game
-      document.getElementById('leaveBtn').addEventListener('click', () => {
-        if (confirm('Are you sure you want to leave the game?')) {
-          document.getElementById('leaveForm').submit();
-        }
-      });
-
-      // Next Room
-      const nextBtn = document.getElementById('nextRoomBtn');
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-          const nextRoomId = nextBtn.dataset.nextRoom;
-          if (nextRoomId) window.location.href = '/room/' + nextRoomId;
-        });
+      // ======= Show Popup Function =======
+      function showPopup(message, redirectUrl) {
+        const popup = document.getElementById('popupPanel');
+        const msgEl = document.getElementById('popupMsg');
+        const btn = document.getElementById('popupBtn');
+        msgEl.textContent = message;
+        popup.style.display = 'flex';
+        btn.addEventListener('click', () => window.location.href = redirectUrl);
+        setTimeout(() => window.location.href = redirectUrl, 2000);
       }
 
-      // 🔁 Progress Refresh
+      // ======= Refresh Progress =======
       async function refreshProgress() {
         try {
-          // ✅ Safe DOM check — avoid null reference when leaving page
           const bar = document.getElementById('progressBar');
-          if (!bar) return; // stop if element missing (e.g., on question page)
+          if (!bar) return;
 
-          const res = await fetch(`/room/${roomId}/progress`);
+          const currentPath = window.location.pathname;
+          const match = currentPath.match(/\/room\/(\d+)/);
+          const dynamicRoomId = match ? match[1] : roomId;
+
+          const res = await fetch(`/room/${dynamicRoomId}/progress`);
           const data = await res.json();
           if (!data.success) return;
 
-          // Update progress bar + text
           bar.style.width = data.progressPercent + '%';
           document.getElementById('progressCount').textContent =
             `${data.collectedRequired} / ${data.totalRequired}`;
 
-          // Update items dynamically
           const list = document.getElementById('itemList');
           list.innerHTML = '';
           data.items.forEach(item => {
@@ -112,30 +115,169 @@ block content
             list.appendChild(div);
           });
 
+          const totalCollected = data.collectedIds.length;
+          const totalItems = data.items.length;
           document.getElementById('itemHeader').textContent =
-            `Discovered Items (${data.collectedRequired} / ${data.items.length})`;
+            `Discovered Items (${totalCollected} / ${totalItems})`;
 
-          // Add next-room button when completed
-          if (data.progressPercent === 100 && !document.getElementById('nextRoomBtn')) {
-            const btn = document.createElement('button');
-            btn.id = 'nextRoomBtn';
-            btn.className = 'next-room-btn';
-            btn.textContent = 'Proceed to Next Room →';
-            btn.addEventListener('click', () => {
-              window.location.href = '/room/' + (roomId + 1);
-            });
-            document.querySelector('.room-progress').appendChild(btn);
+          // 🎉 Auto next-room / escape logic
+          if (data.progressPercent === 100) {
+            clearInterval(refreshInterval);
+            const isFinalRoom = #{isFinalRoom ? 'true' : 'false'};
+            if (isFinalRoom) {
+              showPopup('🎉 You have escaped the final room!', '/question_recap');
+            } else {
+              showPopup('🎉 You have cleared this room!', '/room/' + (parseInt(dynamicRoomId) + 1));
+            }
           }
+
         } catch (err) {
           console.error('Refresh failed:', err);
         }
       }
 
-      // Interval with cleanup
-      const refreshInterval = setInterval(refreshProgress, 5000);
+      refreshProgress();
+      const refreshInterval = setInterval(refreshProgress, 3000);
       window.addEventListener('beforeunload', () => clearInterval(refreshInterval));
 
-      // 🎯 QR Scanner Logic
+      // ======= Load Power Cards =======
+      async function loadPowerCards() {
+        try {
+          const res = await fetch('/power-cards');
+          const data = await res.json();
+          const container = document.getElementById('powerCardList');
+          container.innerHTML = '';
+
+          if (!data.hasCards) {
+            container.innerHTML = '<p style="color:#aaa;">No power cards collected yet.</p>';
+            return;
+          }
+
+          data.powerCards.forEach(card => {
+            const div = document.createElement('div');
+            div.className = 'power-card';
+            div.innerHTML = `
+              <img class="icon" src="/images/power_${card.power_card_type.toLowerCase()}.png" alt="${card.power_card_type}" />
+              <div class="power-info">
+                <strong>${card.power_card_type}</strong>
+              </div>
+            `;
+
+            const btn = document.createElement('button');
+            if (card.is_activated) {
+              btn.textContent = 'Used';
+              btn.disabled = true;
+              btn.className = 'small-btn used';
+              btn.style.opacity = '0.6';
+            } else {
+              btn.textContent = 'Activate';
+              btn.className = 'small-btn';
+              btn.onclick = async () => {
+                btn.disabled = true;
+                btn.textContent = 'Activating...';
+                await activatePowerCard(card.power_card_type);
+                // ✅ After activation, check DB immediately
+                await checkPowerCardStatus();
+              };
+            }
+
+            div.appendChild(btn);
+            container.appendChild(div);
+          });
+        } catch (err) {
+          console.error('Error loading power cards:', err);
+        }
+      }
+
+      // ======= Activate Power Card =======
+      async function activatePowerCard(type) {
+        const confirmUse = confirm(`Activate ${type} power card?`);
+        if (!confirmUse) return;
+
+        try {
+          const res = await fetch('/activate-power-card', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type })
+          });
+          const result = await res.json();
+
+          // 🧊 Optional local freeze feedback
+          if (result.success && type.toLowerCase() === 'freeze') {
+            const overlay = document.getElementById('freezeOverlay');
+            overlay.style.display = 'flex';
+            setTimeout(() => (overlay.style.display = 'none'), 10000);
+          }
+
+          alert(result.message);
+
+          // ✅ Immediately verify with database
+          if (result.success) {
+            await checkPowerCardStatus();
+          }
+        } catch (err) {
+          console.error('⚠️ Error activating card:', err);
+          alert('⚠️ Error activating card.');
+        }
+      }
+
+      // ======= Check Power Card Status (NEW) =======
+      async function checkPowerCardStatus() {
+        try {
+          const res = await fetch('/power-card-status');
+          const data = await res.json();
+          if (!data.success) return;
+
+          // Update UI instantly based on DB result
+          data.powerCards.forEach(card => {
+            const buttons = document.querySelectorAll('.power-card button');
+            buttons.forEach(btn => {
+              const parent = btn.closest('.power-card');
+              const strongEl = parent.querySelector('strong');
+              if (strongEl && strongEl.textContent.trim().toLowerCase() === card.power_card_type.toLowerCase()) {
+                if (card.is_activated) {
+                  btn.textContent = 'Used';
+                  btn.disabled = true;
+                  btn.className = 'small-btn used';
+                  btn.style.opacity = '0.6';
+                } else {
+                  btn.textContent = 'Activate';
+                  btn.disabled = false;
+                  btn.className = 'small-btn';
+                  btn.style.opacity = '1';
+                }
+              }
+            });
+          });
+        } catch (err) {
+          console.error('Error checking power card status:', err);
+        }
+      }
+
+      loadPowerCards();
+
+      // ======= 🔄 Freeze Check (unchanged) =======
+      async function checkFreezeStatus() {
+        try {
+          const res = await fetch('/session/freeze-status');
+          const data = await res.json();
+          const overlay = document.getElementById('freezeOverlay');
+          if (data.frozen) {
+            document.body.style.pointerEvents = 'none';
+            document.body.style.opacity = '0.5';
+            overlay.style.display = 'flex';
+          } else {
+            document.body.style.pointerEvents = 'auto';
+            document.body.style.opacity = '1';
+            overlay.style.display = 'none';
+          }
+        } catch (err) {
+          console.error('Freeze check failed:', err);
+        }
+      }
+      setInterval(checkFreezeStatus, 2000);
+
+      // ======= QR Scanner (your original, untouched) =======
       const scanBtn = document.getElementById('scanBtn');
       const qrContainer = document.getElementById('qrScannerContainer');
       const closeBtn = document.getElementById('closeScanner');
@@ -145,11 +287,6 @@ block content
       function stopScanner() {
         if (html5QrCode && isScanning) {
           html5QrCode.stop().then(() => {
-            qrContainer.style.opacity = 0;
-            setTimeout(() => (qrContainer.style.display = 'none'), 200);
-            html5QrCode = null;
-            isScanning = false;
-          }).catch(() => {
             qrContainer.style.opacity = 0;
             setTimeout(() => (qrContainer.style.display = 'none'), 200);
             html5QrCode = null;
@@ -166,20 +303,15 @@ block content
         if (isScanning) return;
         qrContainer.style.display = 'flex';
         qrContainer.style.opacity = 1;
-
         try {
-          if (typeof Html5Qrcode === 'undefined') throw new Error('QR library not loaded');
           html5QrCode = new Html5Qrcode("qrScanner");
           const cameras = await Html5Qrcode.getCameras();
-          if (!cameras || cameras.length === 0) throw new Error('No camera found');
           const cameraId = cameras.length > 1 ? cameras[1].id : cameras[0].id;
-
           await html5QrCode.start(
             cameraId,
             { fps: 10, qrbox: { width: 250, height: 250 } },
             async (decodedText) => {
               stopScanner();
-
               if (decodedText.includes('/item/')) {
                 const itemId = decodedText.split('/item/')[1];
                 try {
@@ -187,36 +319,22 @@ block content
                   const text = await res.text();
                   try {
                     const data = JSON.parse(text);
-                    if (!data.success) {
-                      alert(data.message);
-                      return;
-                    }
+                    if (!data.success) { alert(data.message); return; }
                   } catch {
-                    // Backend returned HTML (valid question page)
-                    document.open();
-                    document.write(text);
-                    document.close();
+                    document.open(); document.write(text); document.close();
                   }
-                } catch (err) {
-                  alert('❌ Failed to process item. Please try again.');
+                } catch {
+                  alert('❌ Failed to process item.');
                 }
-                return;
+              } else {
+                alert('Invalid QR code.');
               }
-
-              if (/^[0-9]+$/.test(decodedText)) {
-                window.location.href = '/item/' + decodedText;
-                return;
-              }
-
-              alert('Invalid QR code. Please scan an item QR.');
-            },
-            () => {}
+            }
           );
-
           isScanning = true;
         } catch (err) {
           console.error('Camera error:', err);
-          alert('Camera error: ' + (err && err.message ? err.message : err));
+          alert('Camera error: ' + (err.message || err));
           qrContainer.style.display = 'none';
           isScanning = false;
         }

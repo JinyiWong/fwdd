@@ -48,6 +48,78 @@ module.exports = (db) => {
     }
   });
 
+  // 📍 Get current player's score in the ongoing session
+    router.get('/session/:sessionId/score', async (req, res) => {
+        const { sessionId } = req.params;
+        const userId = req.session.user_id;
+
+        if (!sessionId || !userId) {
+            return res.json({ success: false, message: 'Session or user not found.' });
+        }
+
+        try {
+            const [[player]] = await db.promise().query(
+            `SELECT score 
+            FROM tbl_session_players 
+            WHERE session_id = ? AND user_id = ?`,
+            [sessionId, userId]
+            );
+
+            if (!player) {
+            return res.json({ success: false, score: 0 });
+            }
+
+            res.json({ success: true, score: player.score });
+        } catch (err) {
+            console.error('❌ Error fetching player score:', err);
+            res.status(500).json({ success: false, message: 'Error retrieving score.' });
+        }
+    });
+
+
+  // 📍 Get total time elapsed for current session
+    router.get('/session/time-elapsed', (req, res) => {
+        if (!req.session.game_start_time) {
+            return res.json({ success: false, elapsedSeconds: 0 });
+        }
+
+        const elapsedSeconds = Math.floor((Date.now() - req.session.game_start_time) / 1000);
+        res.json({ success: true, elapsedSeconds });
+    });
+
+    // =====================================
+// 🟢 CHECK IF GAME STARTED (auto-bind player session)
+// =====================================
+router.get('/session/:sessionCode/status', async (req, res) => {
+  const { sessionCode } = req.params;
+  const userId = req.session.user_id;
+
+  try {
+    const [[session]] = await db.promise().query(
+      'SELECT * FROM tbl_game_session WHERE session_code = ?',
+      [sessionCode]
+    );
+    if (!session) return res.json({ success: false, message: 'Session not found' });
+
+    // If game started
+    if (session.started_at) {
+      // ✅ Ensure this player’s session is linked to the same session_id
+      if (!req.session.session_id) {
+        req.session.session_id = session.session_id;
+        req.session.current_room_id = 1;
+        console.log(`✅ Player ${userId} joined active game session ${sessionCode}`);
+      }
+
+      return res.json({ success: true, started: true });
+    }
+
+    res.json({ success: true, started: false });
+  } catch (err) {
+    console.error('❌ Error checking session status:', err);
+    res.status(500).json({ success: false });
+  }
+});
+
   // =====================================
   // 🟣 MANUAL JOIN (POST form)
   // =====================================
@@ -156,6 +228,37 @@ module.exports = (db) => {
       });
     });
   }
+
+  // =====================================
+// 🧊 CHECK IF CURRENT PLAYER IS FROZEN
+// =====================================
+router.get('/session/freeze-status', async (req, res) => {
+  const userId = req.session.user_id;
+  const sessionId = req.session.session_id;
+  if (!userId || !sessionId) return res.json({ frozen: false });
+
+  try {
+    const [rows] = await db.promise().query(
+      `SELECT frozen_until FROM tbl_session_players 
+       WHERE session_id = ? AND user_id = ?`,
+      [sessionId, userId]
+    );
+
+    if (!rows.length || !rows[0].frozen_until) {
+      return res.json({ frozen: false });
+    }
+
+    const frozenUntil = new Date(rows[0].frozen_until);
+    const now = new Date();
+    const frozen = now < frozenUntil;
+
+    res.json({ frozen, until: frozenUntil });
+  } catch (err) {
+    console.error('❌ Error checking freeze status:', err);
+    res.json({ frozen: false });
+  }
+});
+
 
   // =====================================
   // 🟣 AJAX endpoint — lobby refresh

@@ -10,24 +10,108 @@ html(lang="en")
   body
     header.game-header
       div.left-header
-        a.back(href="/dashboard")
-          img(src="/images/back.png", alt="Back", class="back-icon")
-          | Back
-
         div.logo
           img(src="/images/logo.png", alt="Python Escape Logo")
           div.header-text
-            h1 Neon District
-            span Room 1 / 4
+            h1#roomNameHeader= room.room_name
+            span#roomProgress Room #{room.room_order} / 4
 
       div.right-header
         div.timer
           img.icon(src="/images/clock.png", alt="Time")
-          span 01:30
+          span#gameTimer 00:00
         div.score
           img.icon(src="/images/medal.png", alt="Score")
-          span 200
-        a.leave-btn(href="/dashboard") Leave Game
+          span#playerScore 0
+        button.leave-btn(type="button", id="leaveBtn") Leave Game
+        form#leaveForm(action="/leave-game", method="POST" style="display:none")
+          input(type="hidden" name="sessionCode" value=sessionCode)
 
     main.game-container
       block content
+
+    // 🧠 Persistent Timer + Live Score + Leave Logic
+    script.
+      (function() {
+        const sessionId = '#{sessionCode}' || null;
+        let elapsedSeconds = 0;
+        let timerInterval = null;
+        let scoreInterval = null;
+
+        // 🕒 Initialize Timer (reads start from backend)
+        async function initTimer() {
+          try {
+            const res = await fetch('/session/time-elapsed');
+            const data = await res.json();
+            if (data.success) elapsedSeconds = data.elapsedSeconds;
+          } catch (err) {
+            console.error('⏱️ Failed to fetch initial elapsed time:', err);
+          }
+
+          updateTimerDisplay();
+          timerInterval = setInterval(() => {
+            elapsedSeconds++;
+            updateTimerDisplay();
+          }, 1000);
+        }
+
+        // 🧩 Update timer text
+        function updateTimerDisplay() {
+          const min = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
+          const sec = String(elapsedSeconds % 60).padStart(2, '0');
+          const timerEl = document.getElementById('gameTimer');
+          if (timerEl) timerEl.textContent = `${min}:${sec}`;
+        }
+
+        // 🏅 Fetch current score
+        async function fetchScore() {
+          if (!sessionId) return;
+          try {
+            const res = await fetch(`/session/${sessionId}/score`);
+            if (!res.ok) throw new Error('Bad response');
+            const data = await res.json();
+            if (data.success) {
+              const scoreEl = document.getElementById('playerScore');
+              if (scoreEl) scoreEl.textContent = data.score ?? 0;
+            }
+          } catch (err) {
+            console.error('⚠️ Failed to fetch score:', err);
+          }
+        }
+
+        // ✅ Leave Game (records is_end = 1)
+        const leaveBtn = document.getElementById('leaveBtn');
+        if (leaveBtn) {
+          leaveBtn.addEventListener('click', async () => {
+            const confirmLeave = confirm('⚠️ Are you sure you want to leave the game? Your time and score will be saved.');
+            if (!confirmLeave) return;
+
+            try {
+              const res = await fetch('/leave-game', { method: 'POST' });
+              const data = await res.json().catch(() => ({}));
+              if (res.ok && (data.success || res.status === 200)) {
+                alert('👋 You have left the game. Your progress and time are saved.');
+                window.location.href = '/dashboard';
+              } else {
+                alert(data.message || '⚠️ Failed to leave the game.');
+              }
+            } catch (err) {
+              console.error('❌ Leave game error:', err);
+              alert('Server error while leaving.');
+            }
+          });
+        }
+
+        // ✅ Start both systems
+        initTimer();
+        fetchScore();
+
+        // Refresh score every 3 seconds
+        scoreInterval = setInterval(fetchScore, 3000);
+
+        // 🧹 Cleanup when user leaves page
+        window.addEventListener('beforeunload', () => {
+          if (timerInterval) clearInterval(timerInterval);
+          if (scoreInterval) clearInterval(scoreInterval);
+        });
+      })();

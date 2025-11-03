@@ -220,6 +220,26 @@ body::after {
   color: #e200ff;
 }
 
+.next-room-btn {
+  background-color: #4caf50; /* green */
+  color: #fff;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.8rem 0;
+  text-align: center;
+  font-size: 1rem;
+  display: inline-block;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.next-room-btn:hover {
+  background-color: #66bb6a;
+  transform: translateY(-2px);
+}
 /* === ITEM LIST === */
 .items .item {
   border: 1px solid rgba(255,255,255,0.2);
