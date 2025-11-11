@@ -135,7 +135,7 @@ router.post('/submit-answer', async (req, res) => {
       [sessionId, userId]
     );
 
-    // ✅ ADD DEBUG LOGGING
+    // ✅ DEBUG LOG
     console.log(`🎮 Player ${userId} answered Q${questionId}:`, {
       isCorrect,
       baseMark: marks,
@@ -143,7 +143,7 @@ router.post('/submit-answer', async (req, res) => {
       lucky_active: playerStatus?.lucky_active
     });
 
-    // ⚡ DOUBLE effect: next correct answer = double marks
+    // ⚡ DOUBLE effect
     if (isCorrect && playerStatus && playerStatus.double_active === 1) {
       console.log(`⚡ DOUBLE activated! Marks: ${marks} → ${marks * 2}`);
       marks *= 2;
@@ -153,15 +153,13 @@ router.post('/submit-answer', async (req, res) => {
       );
     }
 
-    // 🍀 LUCKY effect: next wrong answer = second chance (no penalty)
+    // 🍀 LUCKY effect
     if (!isCorrect && playerStatus && playerStatus.lucky_active === 1) {
       console.log(`🍀 LUCKY activated! Giving second chance...`);
       await db.promise().query(
         'UPDATE tbl_session_players SET lucky_active = 0 WHERE session_id = ? AND user_id = ?',
         [sessionId, userId]
       );
-      
-      // ⚠️ DO NOT record the wrong answer - let them retry
       return res.json({
         success: true,
         isCorrect: false,
@@ -172,7 +170,7 @@ router.post('/submit-answer', async (req, res) => {
       });
     }
 
-    // 3️⃣ Record per-question answer (only if not Lucky retry)
+    // 3️⃣ Record per-question answer
     await db.promise().query(
       `INSERT INTO tbl_player_answers 
        (session_id, user_id, question_id, selected_option, is_correct, time_answered)
@@ -180,7 +178,7 @@ router.post('/submit-answer', async (req, res) => {
       [sessionId, userId, questionId, selectedOption, isCorrect, timeTaken]
     );
 
-    // 4️⃣ Update score (not total time yet)
+    // 4️⃣ Update score
     if (marks > 0) {
       await db.promise().query(
         `UPDATE tbl_session_players
@@ -194,6 +192,7 @@ router.post('/submit-answer', async (req, res) => {
     let bonusMarks = 0;
     let roomUnlocked = false;
     let isFinalRoom = false;
+    let redirectUrl = null; // 👈 add redirect variable
 
     // 5️⃣ If correct and linked to item
     if (isCorrect && itemId) {
@@ -253,7 +252,7 @@ router.post('/submit-answer', async (req, res) => {
         }
       }
 
-      // 6️⃣ Check if all required items of this room collected
+      // 6️⃣ Check if all required items collected
       const [required] = await db.promise().query(
         `SELECT item_id FROM tbl_items WHERE room_id = ? AND is_required = 1`,
         [roomId]
@@ -292,9 +291,15 @@ router.post('/submit-answer', async (req, res) => {
               [totalTime, sessionId, userId]
             );
 
-            console.log(
-              `🏁 Player ${userId} escaped all rooms in ${totalTime}s!`
+            console.log(`🏁 Player ${userId} escaped all rooms in ${totalTime}s!`);
+
+            // 🔹 Fetch the session_code for redirect
+            const [[sessionData]] = await db.promise().query(
+              'SELECT session_code FROM tbl_game_session WHERE session_id = ?',
+              [sessionId]
             );
+            redirectUrl = `/results/${sessionData.session_code}`;
+
 
             delete req.session.current_room_id;
             delete req.session.game_start_time;
@@ -311,6 +316,7 @@ router.post('/submit-answer', async (req, res) => {
       bonusMarks,
       roomUnlocked,
       isFinalRoom,
+      redirectUrl, // 👈 added field
       message: isCorrect
         ? `✅ Correct! You earned ${marks} marks${bonusMarks ? ' + ' + bonusMarks + ' bonus!' : ''}`
         : '❌ Wrong! No marks awarded.',

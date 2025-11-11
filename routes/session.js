@@ -374,5 +374,64 @@ router.get('/session/:code/active', (req, res) => {
   );
 });
 
+// =====================================
+// 🏆 View Session Results (Leaderboard)
+// =====================================
+router.get('/results/:sessionCode', async (req, res) => {
+  try {
+    const { sessionCode } = req.params;
+
+    // 1️⃣ Find session_id by code
+    const [[session]] = await db.promise().query(
+      'SELECT session_id FROM tbl_game_session WHERE session_code = ?',
+      [sessionCode]
+    );
+
+    if (!session) {
+      return res.render('results', {
+        players: [],
+        message: '❌ Session not found or already deleted.'
+      });
+    }
+
+    const sessionId = session.session_id;
+
+    // 2️⃣ Join users + player scores
+    const [rows] = await db.promise().query(
+      `SELECT u.username, sp.score, sp.time_taken
+       FROM tbl_session_players sp
+       JOIN tbl_users u ON sp.user_id = u.user_id
+       WHERE sp.session_id = ?
+       ORDER BY sp.score DESC, sp.time_taken ASC`,
+      [sessionId]
+    );
+
+    if (rows.length === 0) {
+      return res.render('results', {
+        players: [],
+        message: 'No players found for this session.'
+      });
+    }
+
+    // 3️⃣ Format time (seconds → mm:ss)
+    const players = rows.map((p, index) => {
+      const minutes = Math.floor(p.time_taken / 60);
+      const seconds = p.time_taken % 60;
+      return {
+        rank: index + 1,
+        name: p.username,
+        score: p.score,
+        time: `${minutes}:${seconds.toString().padStart(2, '0')}`
+      };
+    });
+
+    res.render('results', { players, message: null });
+
+  } catch (err) {
+    console.error('❌ Error loading results:', err);
+    res.status(500).render('results', { players: [], message: 'Server error loading results.' });
+  }
+});
+
   return router;
 };

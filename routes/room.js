@@ -310,6 +310,65 @@ router.post('/leave-game', async (req, res) => {
   }
 });
 
+// =====================================
+// 📘 QUESTION RECAP PAGE
+// =====================================
+router.get('/question_recap', async (req, res) => {
+  try {
+    const userId = req.session.user_id;
+    const sessionId = req.session.session_id;
+
+    if (!userId || !sessionId) {
+      return res.redirect('/dashboard');
+    }
+
+    // 🟢 Fetch player performance
+    const [[player]] = await db.promise().query(
+      `SELECT score, time_taken FROM tbl_session_players 
+       WHERE session_id = ? AND user_id = ?`,
+      [sessionId, userId]
+    );
+
+    // 🟢 Count total items collected
+    const [[itemStats]] = await db.promise().query(
+      `SELECT COUNT(*) AS collected FROM tbl_player_items 
+       WHERE session_id = ? AND user_id = ?`,
+      [sessionId, userId]
+    );
+
+    // 🟢 Fetch all answered questions with details
+    const [answers] = await db.promise().query(
+      `SELECT qa.*, q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, 
+              q.correct_answer, q.explanation
+       FROM tbl_player_answers qa
+       JOIN tbl_questions q ON qa.question_id = q.question_id
+       WHERE qa.session_id = ? AND qa.user_id = ?`,
+      [sessionId, userId]
+    );
+
+    const totalAnswered = answers.length;
+    const totalCorrect = answers.filter(a => a.is_correct === 1).length;
+    const accuracy = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
+
+    // Convert time to mm:ss
+    const mins = Math.floor(player.time_taken / 60);
+    const secs = player.time_taken % 60;
+    const formattedTime = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+    res.render('question_recap', {
+      score: player.score || 0,
+      timeTaken: formattedTime,
+      itemsCollected: itemStats.collected || 0,
+      accuracy,
+      answers
+    });
+  } catch (err) {
+    console.error('❌ Error loading question recap:', err);
+    res.status(500).send('Error loading question recap page.');
+  }
+});
+
+
   // =====================================
   // 🟢 AJAX REFRESH — room progress
   // =====================================

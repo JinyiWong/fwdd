@@ -91,7 +91,15 @@ block content
             });
 
             const data = await res.json();
-            
+
+            // 🚀 If player escaped final room → redirect to result page
+            if (data.redirectUrl) {
+              showPopup('🎉 Escaped!', 'You completed all rooms successfully!', () => {
+                window.location.href = data.redirectUrl;
+              }, '#4caf50');
+              return;
+            }
+
             // ✅ Handle Lucky Card Retry
             if (data.retryAllowed) {
               showPopup('🍀 Lucky Card!', data.message, () => {
@@ -104,7 +112,7 @@ block content
               }, '#ffeb3b'); // Yellow color for lucky
               return; // Don't redirect
             }
-            
+
             let msg = data.message || '';
             if (data.bonusMarks && data.bonusMarks > 0)
               msg += ` 🏅 Bonus +${data.bonusMarks} marks!`;

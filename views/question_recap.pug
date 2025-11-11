@@ -18,7 +18,7 @@ html(lang="en")
           img(src="/images/logo.png", alt="Python Escape Logo")
           div.header-text
             h1 Question Recap
-            span Review question you have answered
+            span Review the questions you answered
 
       a.logout(href="/logout")
         img(src="/images/logout.png", alt="Logout", class="logout-icon")
@@ -29,31 +29,45 @@ html(lang="en")
         h2 Congrats! You have escaped!
         .stats-container
           .stat
-            h3 1050
+            h3= score
             p Score
           .stat
-            h3 30:08
+            h3= timeTaken
             p Time Taken
           .stat
-            h3 15/16
-            p Items
+            h3= itemsCollected
+            p Items Collected
           .stat
-            h3 98%
+            h3 #{accuracy}%
             p Accuracy
 
-      // Example repeated questions
-      each q in [1,2,3,4]
-        .card.question-card
-          h3 Question #{q}:
-          p.question-text In Python, what does the following code output?
-          pre.code-block print(len(["neon", "cyber", "hack"]))
-          
-          .answers
-            button.option.correct 3
-            button.option.wrong 2
-            button.option 4
-            button.option 1
+      if answers && answers.length
+        each a, i in answers
+          .card.question-card
+            h3 Question #{i + 1}:
+            p.question-text= a.question_text
 
-          .explanation
-            span.label explanation:
-            p len() returns the number of elements in the list, not the length of each string or the concatenated result.
+            if a.code_example
+              pre.code-block= a.code_example
+
+            .answers
+              // ✅ Highlight player's choice and correct answer
+              button.option(
+                class=a.selected_option === 'A' ? (a.correct_answer === 'A' ? 'correct' : 'wrong') : (a.correct_answer === 'A' ? 'highlight-correct' : '')
+              )= a.option_a
+              button.option(
+                class=a.selected_option === 'B' ? (a.correct_answer === 'B' ? 'correct' : 'wrong') : (a.correct_answer === 'B' ? 'highlight-correct' : '')
+              )= a.option_b
+              button.option(
+                class=a.selected_option === 'C' ? (a.correct_answer === 'C' ? 'correct' : 'wrong') : (a.correct_answer === 'C' ? 'highlight-correct' : '')
+              )= a.option_c
+              button.option(
+                class=a.selected_option === 'D' ? (a.correct_answer === 'D' ? 'correct' : 'wrong') : (a.correct_answer === 'D' ? 'highlight-correct' : '')
+              )= a.option_d
+
+            .explanation
+              span.label Explanation:
+              p= a.explanation
+      else
+        .card
+          p(style="color:#ccc; text-align:center;") No answers found for this session.

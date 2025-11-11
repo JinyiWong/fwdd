@@ -266,6 +266,19 @@ body::before {
   margin-bottom: 0.3rem;
 }
 
+/* The actual correct answer (if player got wrong) */
+.option.highlight-correct {
+  border-color: #00ff73;
+  color: #00ff73;
+}
+
+/* Correction info */
+.correction {
+  margin-top: 0.8rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 
 /* === RESPONSIVE === */
 @media (max-width: 768px) {
