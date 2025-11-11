@@ -6,8 +6,6 @@ html(lang="en")
     title Python Escape Dashboard
     link(rel="stylesheet", href="/css/dashboard.css")
     link(href="https://fonts.googleapis.com/css2?family=Kumbh+Sans:wght@400;500;600;700;800&display=swap", rel="stylesheet")
-
-    // ✅ Load Html5Qrcode from CDN
     script(src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js")
 
   body
@@ -18,7 +16,6 @@ html(lang="en")
         div.header-text
           h1 Python Escape
           span Welcome, #{currentUser || 'user'}
-
       a.logout(href="/logout") 
         i(class="icon-logout")
         |  LOGOUT
@@ -93,12 +90,37 @@ html(lang="en")
       div#qrScanner(style="width:320px; height:320px; background:#000; border-radius:10px; overflow:hidden;")
       button#closeScanner(style="margin-top:20px; padding:10px 25px; background:#e91e63; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600;") Close Scanner
 
-    // 🧩 Enhanced QR Scanner Script (Auto join)
+    // ⚠️ Error popup overlay (only if error variable is passed)
+    if error
+      div#errorPopup(
+        style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; justify-content:center; align-items:center; z-index:10000;"
+      )
+        .popup-card(
+          style="background:rgba(21,0,44,0.95); border:2px solid #e200ff; box-shadow:0 0 20px rgba(226,0,255,0.6); border-radius:20px; padding:30px 40px; text-align:center; color:#fff; max-width:400px;"
+        )
+          h2(style="color:#e200ff; margin-bottom:15px; font-size:1.5rem; font-weight:700") ⚠️ Session Error
+          p(style="margin-bottom:25px; font-size:1rem; line-height:1.6")= error
+          button#closeErrorBtn(
+            style="padding:10px 25px; background:#e200ff; color:#15002C; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;"
+          ) OK
+
+    // 🧠 Script logic
     script.
       document.addEventListener('DOMContentLoaded', () => {
         console.log("✅ Page loaded, initializing QR scanner...");
 
-        // Wait a bit for the CDN to load
+        // === Error popup logic ===
+        const popup = document.getElementById('errorPopup');
+        const closeBtn = document.getElementById('closeErrorBtn');
+        if (closeBtn) {
+          closeBtn.addEventListener('click', () => {
+            popup.style.opacity = '0';
+            popup.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => popup.remove(), 300);
+          });
+        }
+
+        // === QR Scanner ===
         setTimeout(() => {
           if (typeof Html5Qrcode === 'undefined') {
             console.error("❌ Html5Qrcode library not loaded.");
@@ -114,7 +136,6 @@ html(lang="en")
           let html5QrCode = null;
           let isScanning = false;
 
-          // Open scanner
           scanIcon.addEventListener('click', async () => {
             if (isScanning) return;
             qrContainer.style.display = 'flex';
@@ -130,28 +151,18 @@ html(lang="en")
                 { fps: 10, qrbox: { width: 250, height: 250 } },
                 (decodedText) => {
                   console.log("✅ QR detected:", decodedText);
-                  
-                  // ✅ If QR contains full join URL, redirect immediately
-                  if (decodedText.startsWith("http://") || decodedText.startsWith("https://")) {
-                    stopScanner();
-                    window.location.href = decodedText;
-                    return;
-                  }
-
-                  // ✅ Otherwise treat it as session code
-                  document.getElementById('code').value = decodedText;
                   stopScanner();
-
-                  // Optional: auto submit join form
-                  const form = document.querySelector('form[action="/join-session"]');
-                  if (form) form.submit();
-                },
-                (errorMessage) => {}
+                  if (decodedText.startsWith("http://") || decodedText.startsWith("https://")) {
+                    window.location.href = decodedText;
+                  } else {
+                    document.getElementById('code').value = decodedText;
+                    const form = document.querySelector('form[action="/join-session"]');
+                    if (form) form.submit();
+                  }
+                }
               );
-
               isScanning = true;
               console.log("📸 QR scanner started");
-
             } catch (err) {
               console.error("❌ Camera error:", err);
               alert(`Camera Error: ${err.message}`);
@@ -160,25 +171,19 @@ html(lang="en")
             }
           });
 
-          // Close scanner
-          closeBtn.addEventListener('click', () => stopScanner());
+          closeBtn.addEventListener('click', stopScanner);
 
-          // Stop scanner safely
           function stopScanner() {
             if (html5QrCode && isScanning) {
-              html5QrCode.stop()
-                .then(() => {
-                  console.log("🛑 Scanner stopped");
-                  qrContainer.style.display = 'none';
-                  isScanning = false;
-                  html5QrCode = null;
-                })
-                .catch((err) => {
-                  console.error("⚠️ Stop scanner error:", err);
-                  qrContainer.style.display = 'none';
-                  isScanning = false;
-                  html5QrCode = null;
-                });
+              html5QrCode.stop().then(() => {
+                qrContainer.style.display = 'none';
+                isScanning = false;
+                html5QrCode = null;
+              }).catch(() => {
+                qrContainer.style.display = 'none';
+                isScanning = false;
+                html5QrCode = null;
+              });
             } else {
               qrContainer.style.display = 'none';
               isScanning = false;

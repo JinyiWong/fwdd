@@ -74,8 +74,9 @@ html(lang="en")
           else
             p(style="color:#ccc") Waiting for players to join...
 
-    // 🧠 Script — auto refresh + game sync
+    // 🧠 Script — auto refresh + session checks
     script.
+      // 🧠 Script — auto refresh + session checks
       const sessionCode = "#{sessionCode}";
       const isHost = #{isHost ? 'true' : 'false'};
 
@@ -113,9 +114,62 @@ html(lang="en")
       }
 
       // 🕒 Refresh player list periodically
-      setInterval(fetchPlayers, 3000);
+      const fetchPlayersInterval = setInterval(fetchPlayers, 3000);
 
-      // ⚙️ Confirmations for leave / end
+      // 🎨 Popup when host ends session
+      function showEndPopup(message) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position:fixed; inset:0; background:rgba(0,0,0,0.85); color:#fff;
+          display:flex; flex-direction:column; justify-content:center; align-items:center;
+          font-family:'Kumbh Sans'; z-index:9999; text-align:center;
+        `;
+        overlay.innerHTML = `
+          <div style="background:rgba(21,0,44,0.95); border:2px solid #e200ff; box-shadow:0 0 20px rgba(226,0,255,0.6);
+                      border-radius:20px; padding:30px 40px; max-width:420px;">
+            <h2 style="color:#e200ff; margin-bottom:10px;">⚠️ Game Ended</h2>
+            <p style="margin-bottom:25px; line-height:1.5;">${message}</p>
+            <button id="backBtn"
+              style="padding:10px 25px; background:#e200ff; color:#15002C; border:none;
+                    border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+              OK
+            </button>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+
+        document.getElementById('backBtn').addEventListener('click', () => {
+          window.location.href = '/dashboard';
+        });
+
+        // Auto redirect after 5 seconds
+        setTimeout(() => window.location.href = '/dashboard', 5000);
+      }
+
+      // 🧩 Detect if host ends the session (FOR ALL PLAYERS)
+      async function checkSessionActive() {
+        try {
+          const res = await fetch(`/session/${sessionCode}/active`);
+          const data = await res.json();
+
+          if (!data.active) {
+            console.warn("⚠️ Host ended the session — redirecting...");
+            
+            // Clear all intervals
+            clearInterval(fetchPlayersInterval);
+            if (window.checkGameStartInterval) {
+              clearInterval(window.checkGameStartInterval);
+            }
+            clearInterval(checkSessionInterval);
+            
+            showEndPopup("⚠️ The host has ended the game. You will be returned to the dashboard.");
+          }
+        } catch (err) {
+          console.error("Error checking session activity:", err);
+        }
+      }
+
+      // ⚙️ Confirmations for leave / end + Game start detection
       document.addEventListener('DOMContentLoaded', () => {
         const leaveForm = document.getElementById('leaveGameForm');
         const endForm = document.getElementById('endGameForm');
@@ -146,6 +200,10 @@ html(lang="en")
               console.error("Error checking session start:", err);
             }
           }
-          setInterval(checkGameStart, 2000); // Poll every 2 seconds
+          // Store in window scope so it can be cleared
+          window.checkGameStartInterval = setInterval(checkGameStart, 2000);
         }
       });
+
+      // 🔁 Check session status every 3s (FOR ALL PLAYERS, including host)
+      const checkSessionInterval = setInterval(checkSessionActive, 3000);

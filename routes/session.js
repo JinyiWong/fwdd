@@ -311,13 +311,22 @@ router.get('/session/freeze-status', async (req, res) => {
     });
   });
 
-  // =====================================
-  // 🔴 END SESSION (Host)
-  // =====================================
-  router.post('/end-session', (req, res) => {
-    const { sessionCode } = req.body;
-    if (!sessionCode) return res.status(400).send('Invalid request');
+// =====================================
+// 🔴 END SESSION (Host)
+// =====================================
+router.post('/end-session', (req, res) => {
+  const { sessionCode } = req.body;
+  if (!sessionCode) return res.status(400).send('Invalid request');
 
+  // 1️⃣ Mark session as ended
+  const markEnded = `UPDATE tbl_game_session SET status = 'ended', ended_at = NOW() WHERE session_code = ?`;
+  db.query(markEnded, [sessionCode], (err0) => {
+    if (err0) {
+      console.error('❌ Error marking session ended:', err0);
+      return res.status(500).send('Error ending session.');
+    }
+
+    // 2️⃣ Delete players (clean up)
     const deletePlayers = `
       DELETE sp FROM tbl_session_players sp
       JOIN tbl_game_session gs ON sp.session_id = gs.session_id
@@ -330,18 +339,40 @@ router.get('/session/freeze-status', async (req, res) => {
         return res.status(500).send('Error ending session.');
       }
 
-      const deleteSession = `DELETE FROM tbl_game_session WHERE session_code = ?`;
-      db.query(deleteSession, [sessionCode], (err2) => {
-        if (err2) {
-          console.error('❌ Error deleting session:', err2);
-          return res.status(500).send('Error ending session.');
-        }
-
-        console.log(`🏁 Session ${sessionCode} ended by host.`);
-        return res.redirect('/dashboard');
-      });
+      console.log(`🏁 Session ${sessionCode} marked as ended by host.`);
+      return res.redirect('/dashboard');
     });
   });
+});
+
+
+// =====================================
+// 🔍 Check if Session Still Active
+// =====================================
+router.get('/session/:code/active', (req, res) => {
+  const { code } = req.params;
+  if (!code) return res.json({ active: false });
+
+  db.query(
+    'SELECT status FROM tbl_game_session WHERE session_code = ?',
+    [code],
+    (err, rows) => {
+      if (err) {
+        console.error('❌ Error checking session:', err);
+        return res.json({ active: false });
+      }
+
+      if (rows.length === 0) {
+        // Session deleted or not found
+        return res.json({ active: false });
+      }
+
+      const session = rows[0];
+      const isActive = session.status === 'active';
+      return res.json({ active: isActive });
+    }
+  );
+});
 
   return router;
 };
