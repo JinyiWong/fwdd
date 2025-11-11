@@ -135,8 +135,17 @@ router.post('/submit-answer', async (req, res) => {
       [sessionId, userId]
     );
 
+    // ✅ ADD DEBUG LOGGING
+    console.log(`🎮 Player ${userId} answered Q${questionId}:`, {
+      isCorrect,
+      baseMark: marks,
+      double_active: playerStatus?.double_active,
+      lucky_active: playerStatus?.lucky_active
+    });
+
     // ⚡ DOUBLE effect: next correct answer = double marks
-    if (isCorrect && playerStatus.double_active === 1) {
+    if (isCorrect && playerStatus && playerStatus.double_active === 1) {
+      console.log(`⚡ DOUBLE activated! Marks: ${marks} → ${marks * 2}`);
       marks *= 2;
       await db.promise().query(
         'UPDATE tbl_session_players SET double_active = 0 WHERE session_id = ? AND user_id = ?',
@@ -145,11 +154,14 @@ router.post('/submit-answer', async (req, res) => {
     }
 
     // 🍀 LUCKY effect: next wrong answer = second chance (no penalty)
-    if (!isCorrect && playerStatus.lucky_active === 1) {
+    if (!isCorrect && playerStatus && playerStatus.lucky_active === 1) {
+      console.log(`🍀 LUCKY activated! Giving second chance...`);
       await db.promise().query(
         'UPDATE tbl_session_players SET lucky_active = 0 WHERE session_id = ? AND user_id = ?',
         [sessionId, userId]
       );
+      
+      // ⚠️ DO NOT record the wrong answer - let them retry
       return res.json({
         success: true,
         isCorrect: false,
@@ -160,7 +172,7 @@ router.post('/submit-answer', async (req, res) => {
       });
     }
 
-    // 3️⃣ Record per-question answer
+    // 3️⃣ Record per-question answer (only if not Lucky retry)
     await db.promise().query(
       `INSERT INTO tbl_player_answers 
        (session_id, user_id, question_id, selected_option, is_correct, time_answered)
@@ -176,6 +188,7 @@ router.post('/submit-answer', async (req, res) => {
          WHERE session_id = ? AND user_id = ?`,
         [marks, sessionId, userId]
       );
+      console.log(`💰 Added ${marks} marks to player ${userId}`);
     }
 
     let bonusMarks = 0;
@@ -236,6 +249,7 @@ router.post('/submit-answer', async (req, res) => {
              WHERE session_id = ? AND user_id = ?`,
             [bonusMarks, sessionId, userId]
           );
+          console.log(`🏅 Added ${bonusMarks} bonus marks to player ${userId}`);
         }
       }
 
@@ -254,11 +268,9 @@ router.post('/submit-answer', async (req, res) => {
         );
 
         if (collected.length === required.length) {
-          // 🟢 All required collected → Room cleared
           roomUnlocked = true;
           req.session.current_room_id = roomId + 1;
 
-          // ✅ If this was the final room (dynamic detection)
           const [[maxRoom]] = await db.promise().query(
             'SELECT MAX(room_id) AS maxRoom FROM tbl_room'
           );
@@ -266,7 +278,6 @@ router.post('/submit-answer', async (req, res) => {
           if (roomId === maxRoom.maxRoom) {
             isFinalRoom = true;
 
-            // ⏱️ Calculate total play time (same logic as leave-session)
             let totalTime = 0;
             if (req.session.game_start_time) {
               totalTime = Math.floor(
@@ -274,7 +285,6 @@ router.post('/submit-answer', async (req, res) => {
               );
             }
 
-            // ✅ Mark session ended & record time
             await db.promise().query(
               `UPDATE tbl_session_players
                SET is_end = 1, time_taken = ?
@@ -286,7 +296,6 @@ router.post('/submit-answer', async (req, res) => {
               `🏁 Player ${userId} escaped all rooms in ${totalTime}s!`
             );
 
-            // 🧹 Reset session values for a clean restart
             delete req.session.current_room_id;
             delete req.session.game_start_time;
           }
@@ -308,9 +317,7 @@ router.post('/submit-answer', async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Error in submit-answer:', err);
-    return res
-      .status(500)
-      .json({ success: false, message: 'Internal server error. Check backend logs.' });
+    return res.status(500).json({ success: false, message: 'Internal server error. Check backend logs.' });
   }
 });
 

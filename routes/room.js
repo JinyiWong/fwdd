@@ -122,9 +122,9 @@ router.get('/power-cards', async (req, res) => {
   }
 
   try {
-    // Get player’s collected items that are power cards
+    // ✅ ADD pi.is_activated to the SELECT
     const [rows] = await db.promise().query(
-      `SELECT i.item_id, i.item_name, i.power_card_type
+      `SELECT i.item_id, i.item_name, i.power_card_type, pi.is_activated
        FROM tbl_player_items pi
        JOIN tbl_items i ON pi.item_id = i.item_id
        WHERE pi.session_id = ? AND pi.user_id = ? AND i.is_power_card = 1`,

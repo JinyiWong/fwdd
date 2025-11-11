@@ -91,6 +91,20 @@ block content
             });
 
             const data = await res.json();
+            
+            // ✅ Handle Lucky Card Retry
+            if (data.retryAllowed) {
+              showPopup('🍀 Lucky Card!', data.message, () => {
+                // Re-enable buttons and reset timer for retry
+                document.querySelectorAll('.answer-btn').forEach(b => {
+                  b.disabled = false;
+                  b.style.opacity = '1';
+                });
+                startTime = Date.now(); // Reset timer
+              }, '#ffeb3b'); // Yellow color for lucky
+              return; // Don't redirect
+            }
+            
             let msg = data.message || '';
             if (data.bonusMarks && data.bonusMarks > 0)
               msg += ` 🏅 Bonus +${data.bonusMarks} marks!`;
