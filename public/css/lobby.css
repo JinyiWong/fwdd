@@ -1,18 +1,15 @@
-/* ============================================
-   🧩 LOBBY PAGE STYLES
-   ============================================ */
 body {
   margin: 0;
   font-family: 'Kumbh Sans', sans-serif;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden; /* keep horizontal scroll disabled only */
   color: #fff;
-  overflow-x: hidden;
   position: relative;
 }
 
-/* === Background Layers === */
+/* === BACKGROUND === */
 body::before {
   content: "";
   position: fixed;
@@ -152,7 +149,8 @@ body::after {
   width: 100%;
   box-sizing: border-box;
   z-index: 2;
-  overflow: hidden;             /* prevents horizontal scroll */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 
