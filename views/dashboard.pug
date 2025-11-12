@@ -42,46 +42,40 @@ html(lang="en")
         .card.leaderboard
           h2 Leaderboard
           p The best of the best—can you beat them?
-          a.view(href="#") View my ranking
-          table
-            thead
-              tr
-                th Rank
-                th Player
-                th Score
-                th Time Taken (minutes)
-            tbody
-              tr
-                td 1
-                td winter
-                td 1507
-                td 10:08
-              tr
-                td 2
-                td Karina
-                td 1500
-                td 10:08
-              tr
-                td 3
-                td Jinyi
-                td 1495
-                td 10:08
+          a.view(href="/leaderboard") View my ranking
+
+          if leaderboard && leaderboard.length
+            table
+              thead
+                tr
+                  th Rank
+                  th Player
+                  th Score
+                  th Time Taken (minutes)
+              tbody
+                each player in leaderboard
+                  tr
+                    td #{player.rank}
+                    td #{player.name}
+                    td #{player.score}
+                    td #{player.time}
+          else
+            p(style="color:#ccc;") No leaderboard records yet.
 
       section.right
         .card.history
           h2 Escape History
           p Your past escape room sessions
-          ul
-            li
-              div.session-info
-                span.code HACK001
-                span.score 🏆 600
-              span.rank #1
-            li
-              div.session-info
-                span.code ESCP020
-                span.score 🏆 1050
-              span.rank #2
+          if history && history.length
+            ul
+              each record in history
+                li
+                  div.session-info
+                    span.code #{record.code}
+                    span.score 🏆 #{record.score}
+                  span.rank ##{record.rank}
+          else
+            p(style="color:#ccc;") No escape history yet.
           a.view(href="#") View all history
 
     // 🟣 Hidden scanner overlay

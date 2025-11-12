@@ -3,53 +3,32 @@ extends layout/dashboard.layout.pug
 block content
   main.dashboard
     .card.leaderboard
-        h2 Leaderboard
-        p The best of the best—can you beat them?
+      h2 Leaderboard
+      p The best of the best—can you beat them?
 
-        table
-            thead
+      table.leaderboard-table
+        thead
+          tr
+            th Rank
+            th Player
+            th Score
+            th Time Taken (minutes)
+        tbody.scrollable
+          if leaderboard && leaderboard.length
+            each player in leaderboard
+              tr(class=player.isCurrentUser ? 'highlight-row' : '')
+                td #{player.rank}
+                td #{player.isCurrentUser ? player.name + ' (You)' : player.name}
+                td #{player.score}
+                td #{player.time}
+          else
             tr
-                th Rank
-                th Player
-                th Score
-                th Time Taken (minutes)
-            tbody
-            // 🏆 Normal leaderboard rows
-            tr
-                td 1
-                td winter
-                td 1507
-                td 10:08
-            tr
-                td 2
-                td Karina
-                td 1500
-                td 10:08
-            tr
-                td 3
-                td Jinyi
-                td 1495
-                td 10:08
-            tr
-                td 4
-                td Gene
-                td 1490
-                td 10:08
-            tr
-                td 5
-                td Momo
-                td 1380
-                td 10:08
-            tr
-                td 6
-                td Meoww
-                td 1300
-                td 10:08
+              td(colspan="4" style="text-align:center; color:#999;") No records yet.
 
-            // 👇 Separate “YOU” as the sticky bottom row
-            tfoot
+        if youData
+          tfoot
             tr.you-row
-                td 10
-                td YOU
-                td 1220
-                td 10:08
+              td #{youData.rank}
+              td #{youData.name}
+              td #{youData.score}
+              td #{youData.time}

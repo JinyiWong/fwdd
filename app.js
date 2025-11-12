@@ -47,7 +47,9 @@ const sessionRoutes = require('./routes/session')(db);
 const itemRoutes = require('./routes/items')(db);
 const itemQuestionRoutes = require('./routes/item-questions')(db);
 const roomRoutes = require('./routes/room')(db);
+const dashboardRoutes = require('./routes/dashboard')(db);
 
+app.use("/", dashboardRoutes);
 app.use("/", roomRoutes);
 app.use("/", itemQuestionRoutes);
 app.use("/", itemRoutes);
@@ -65,16 +67,6 @@ app.get("/about", (req, res) => {
 });
 
 app.get("/register", (req, res) => res.render("register"));
-app.get("/dashboard", (req, res) => {
-  if (!req.session.loggedin) {
-    // If not logged in, redirect to login
-    return res.redirect("/login");
-  }
-
-  res.render("dashboard", {
-    currentUser: req.session.user_name || "user"
-  });
-});
 app.get("/leaderboard", (req, res) => res.render("leaderboard"));
 app.get("/history", (req, res) => res.render("history"));
 app.get("/results", (req, res) => res.render("results"));
