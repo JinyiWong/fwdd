@@ -436,5 +436,44 @@ router.get('/results/:sessionCode', async (req, res) => {
   }
 });
 
+router.get('/check-sessions', async (req, res) => {
+  try {
+    const [sessions] = await db.promise().query(`
+      SELECT session_id
+      FROM tbl_game_session
+      WHERE status = 'active'
+    `);
+
+    if (!sessions.length)
+      return res.json({ success: true, message: 'No active sessions found.' });
+
+    let updatedCount = 0;
+
+    for (const session of sessions) {
+      const [[summary]] = await db.promise().query(`
+        SELECT
+          COUNT(*) AS total_players,
+          SUM(CASE WHEN (time_taken > 0 OR is_end = 1) THEN 1 ELSE 0 END) AS ended_players
+        FROM tbl_session_players
+        WHERE session_id = ?
+      `, [session.session_id]);
+
+      if (summary.total_players > 0 && summary.ended_players === summary.total_players) {
+        await db.promise().query(`
+          UPDATE tbl_game_session
+          SET status = 'ended', ended_at = NOW()
+          WHERE session_id = ?
+        `, [session.session_id]);
+        updatedCount++;
+      }
+    }
+
+    res.json({ success: true, message: `${updatedCount} session(s) updated.` });
+  } catch (err) {
+    console.error('⚠️ Error checking sessions:', err);
+    res.status(500).json({ success: false, message: 'Server error checking sessions.' });
+  }
+});
+
   return router;
 };
