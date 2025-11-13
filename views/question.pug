@@ -40,14 +40,110 @@ block content
   div#freezeOverlay(
     style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9998; justify-content:center; align-items:center; flex-direction:column; color:#fff; font-family:'Kumbh Sans'; font-size:2rem; font-weight:700; letter-spacing:1px;"
   )
-    | 🧊 Frozen... Please wait ⏳
+    | 🧊 Oops! Frozen... Please wait ⏳
 
   // 🧠 Interactive Script
   script.
     (function() {
       let startTime = Date.now();
 
-      // Disable all answer buttons
+      // ======= Neon Alert Popup =======
+      function showAlertPopup(message, callback) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position:fixed; inset:0; background:rgba(0,0,0,0.8);
+          display:flex; justify-content:center; align-items:center; z-index:10000;
+          opacity:0; transition:opacity 0.3s ease;
+        `;
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+          background:rgba(21,0,44,0.95);
+          border:2px solid #e200ff;
+          box-shadow:0 0 20px rgba(226,0,255,0.6);
+          border-radius:20px;
+          padding:30px 40px;
+          text-align:center;
+          color:#fff;
+          max-width:420px;
+          font-family:'Kumbh Sans';
+        `;
+        popup.innerHTML = `
+          <h2 style="color:#e200ff; margin-bottom:15px; font-size:1.5rem; font-weight:700">⚠️ Notice</h2>
+          <p style="margin-bottom:25px; font-size:1rem; line-height:1.6;">${message}</p>
+          <button id="alertOk_${Date.now()}"
+            style="padding:10px 25px; background:#e200ff; color:#15002C; border:none;
+                   border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+            OK
+          </button>
+        `;
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => (overlay.style.opacity = '1'));
+
+        const okBtn = popup.querySelector('button');
+        okBtn.addEventListener('click', () => {
+          overlay.style.opacity = '0';
+          setTimeout(() => overlay.remove(), 300);
+          if (callback) callback();
+        });
+      }
+
+      // ======= Neon Confirmation Popup =======
+      function showConfirmPopup(message, onConfirm) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position:fixed; inset:0; background:rgba(0,0,0,0.8);
+          display:flex; justify-content:center; align-items:center; z-index:10000;
+          opacity:0; transition:opacity 0.3s ease;
+        `;
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+          background:rgba(21,0,44,0.95);
+          border:2px solid #e200ff;
+          box-shadow:0 0 20px rgba(226,0,255,0.6);
+          border-radius:20px;
+          padding:30px 40px;
+          text-align:center;
+          color:#fff;
+          max-width:420px;
+          font-family:'Kumbh Sans';
+        `;
+
+        const uid = Math.random().toString(36).slice(2);
+        const yesId = `confirmYes_${uid}`;
+        const noId = `confirmNo_${uid}`;
+
+        popup.innerHTML = `
+          <h2 style="color:#e200ff; margin-bottom:15px; font-size:1.5rem; font-weight:700">⚠️ Confirmation</h2>
+          <p style="margin-bottom:25px; font-size:1rem; line-height:1.6;">${message}</p>
+          <div style="display:flex; gap:20px; justify-content:center;">
+            <button id="${yesId}"
+              style="padding:10px 25px; background:#e200ff; color:#15002C; border:none;
+                     border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+              YES
+            </button>
+            <button id="${noId}"
+              style="padding:10px 25px; background:#555; color:#fff; border:none;
+                     border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+              NO
+            </button>
+          </div>
+        `;
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => (overlay.style.opacity = '1'));
+
+        function close(confirmed) {
+          overlay.style.opacity = '0';
+          setTimeout(() => overlay.remove(), 300);
+          if (onConfirm) onConfirm(confirmed);
+        }
+
+        document.getElementById(yesId).addEventListener('click', () => close(true));
+        document.getElementById(noId).addEventListener('click', () => close(false));
+      }
+
+      // ======= Disable all answer buttons =======
       function disableButtons() {
         document.querySelectorAll('.answer-btn').forEach(btn => {
           btn.disabled = true;
@@ -55,7 +151,7 @@ block content
         });
       }
 
-      // 🟢 Popup helper
+      // 🟢 Popup helper for results
       function showPopup(title, message, callback, color = '#4caf50') {
         const popup = document.getElementById('popupPanel');
         const titleEl = document.getElementById('popupTitle');
@@ -92,7 +188,6 @@ block content
 
             const data = await res.json();
 
-            // 🚀 If player escaped final room → redirect to result page
             if (data.redirectUrl) {
               showPopup('🎉 Escaped!', 'You completed all rooms successfully!', () => {
                 window.location.href = data.redirectUrl;
@@ -100,17 +195,15 @@ block content
               return;
             }
 
-            // ✅ Handle Lucky Card Retry
             if (data.retryAllowed) {
               showPopup('🍀 Lucky Card!', data.message, () => {
-                // Re-enable buttons and reset timer for retry
                 document.querySelectorAll('.answer-btn').forEach(b => {
                   b.disabled = false;
                   b.style.opacity = '1';
                 });
-                startTime = Date.now(); // Reset timer
-              }, '#ffeb3b'); // Yellow color for lucky
-              return; // Don't redirect
+                startTime = Date.now();
+              }, '#ffeb3b');
+              return;
             }
 
             let msg = data.message || '';
@@ -175,7 +268,9 @@ block content
 
       // ======= Activate Power Card =======
       async function activatePowerCard(type) {
-        const confirmUse = confirm(`Activate power card?`);
+        const confirmUse = await new Promise(resolve =>
+          showConfirmPopup(`Activate ${type} power card?`, resolve)
+        );
         if (!confirmUse) return;
 
         try {
@@ -185,16 +280,15 @@ block content
             body: JSON.stringify({ type })
           });
           const result = await res.json();
-          alert(result.message);
-          await loadPowerCards();
+          showAlertPopup(result.message, () => loadPowerCards());
         } catch (err) {
-          alert('⚠️ Error activating card.');
+          showAlertPopup('⚠️ Error activating card.');
         }
       }
 
       loadPowerCards();
 
-      // ======= 🔄 Check Freeze Status (every 2s) =======
+      // ======= 🔄 Check Freeze Status =======
       async function checkFreezeStatus() {
         try {
           const res = await fetch('/session/freeze-status');

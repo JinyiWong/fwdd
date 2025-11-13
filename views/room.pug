@@ -80,6 +80,105 @@ block content
         setTimeout(() => window.location.href = redirectUrl, 2000);
       }
 
+      // ======= Neon Alert Popup =======
+      function showAlertPopup(message, callback) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position:fixed; inset:0; background:rgba(0,0,0,0.8);
+          display:flex; justify-content:center; align-items:center; z-index:10000;
+        `;
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+          background:rgba(21,0,44,0.95);
+          border:2px solid #e200ff;
+          box-shadow:0 0 20px rgba(226,0,255,0.6);
+          border-radius:20px;
+          padding:30px 40px;
+          text-align:center;
+          color:#fff;
+          max-width:420px;
+          font-family:'Kumbh Sans';
+        `;
+        popup.innerHTML = `
+          <h2 style="color:#e200ff; margin-bottom:15px; font-size:1.5rem; font-weight:700">⚠️ Notice</h2>
+          <p style="margin-bottom:25px; font-size:1rem; line-height:1.6;">${message}</p>
+          <button id="alertOk"
+            style="padding:10px 25px; background:#e200ff; color:#15002C; border:none;
+                  border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+            OK
+          </button>
+        `;
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+
+        const okBtn = document.getElementById('alertOk');
+        okBtn.addEventListener('click', () => {
+          overlay.style.opacity = '0';
+          overlay.style.transition = 'opacity 0.3s ease';
+          setTimeout(() => overlay.remove(), 300);
+          if (callback) callback();
+        });
+      }
+
+      // ======= Neon Confirmation Popup (fixed unique + fade) =======
+      function showConfirmPopup(message, onConfirm) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position:fixed; inset:0; background:rgba(0,0,0,0.8);
+          display:flex; justify-content:center; align-items:center; z-index:10000;
+          opacity:0; transition:opacity 0.3s ease;
+        `;
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+          background:rgba(21,0,44,0.95);
+          border:2px solid #e200ff;
+          box-shadow:0 0 20px rgba(226,0,255,0.6);
+          border-radius:20px;
+          padding:30px 40px;
+          text-align:center;
+          color:#fff;
+          max-width:420px;
+          font-family:'Kumbh Sans';
+        `;
+
+        // 👇 generate unique IDs for each popup so multiple can exist safely
+        const uid = Math.random().toString(36).slice(2);
+        const yesId = `confirmYes_${uid}`;
+        const noId = `confirmNo_${uid}`;
+
+        popup.innerHTML = `
+          <h2 style="color:#e200ff; margin-bottom:15px; font-size:1.5rem; font-weight:700">⚠️ Confirmation</h2>
+          <p style="margin-bottom:25px; font-size:1rem; line-height:1.6;">${message}</p>
+          <div style="display:flex; gap:20px; justify-content:center;">
+            <button id="${yesId}"
+              style="padding:10px 25px; background:#e200ff; color:#15002C; border:none;
+                    border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+              YES
+            </button>
+            <button id="${noId}"
+              style="padding:10px 25px; background:#555; color:#fff; border:none;
+                    border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+              NO
+            </button>
+          </div>
+        `;
+
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+
+        // fade in nicely
+        requestAnimationFrame(() => (overlay.style.opacity = '1'));
+
+        function close(confirmed) {
+          overlay.style.opacity = '0';
+          setTimeout(() => overlay.remove(), 300);
+          if (onConfirm) onConfirm(confirmed);
+        }
+
+        document.getElementById(yesId).addEventListener('click', () => close(true));
+        document.getElementById(noId).addEventListener('click', () => close(false));
+      }
+
       // ======= Refresh Progress =======
       async function refreshProgress() {
         try {
@@ -192,8 +291,10 @@ block content
 
       // ======= Activate Power Card =======
       async function activatePowerCard(type) {
-        const confirmUse = confirm(`Activate ${type} power card?`);
-        if (!confirmUse) return;
+      const confirmUse = await new Promise((resolve) => {
+        showConfirmPopup(`Activate ${type} power card?`, (confirmed) => resolve(confirmed));
+      });
+      if (!confirmUse) return;
 
         try {
           const res = await fetch('/activate-power-card', {
@@ -210,7 +311,7 @@ block content
             setTimeout(() => (overlay.style.display = 'none'), 10000);
           }
 
-          alert(result.message);
+          showAlertPopup(result.message);
 
           // ✅ Immediately verify with database
           if (result.success) {
@@ -218,7 +319,7 @@ block content
           }
         } catch (err) {
           console.error('⚠️ Error activating card:', err);
-          alert('⚠️ Error activating card.');
+          showAlertPopup('⚠️ Error activating card.');
         }
       }
 
@@ -320,22 +421,22 @@ block content
                   const text = await res.text();
                   try {
                     const data = JSON.parse(text);
-                    if (!data.success) { alert(data.message); return; }
+                    if (!data.success) {showAlertPopup(data.message); return; }
                   } catch {
                     document.open(); document.write(text); document.close();
                   }
                 } catch {
-                  alert('❌ Failed to process item.');
+                  showAlertPopup('❌ Failed to process item.');
                 }
               } else {
-                alert('Invalid QR code.');
+                showAlertPopup('Invalid QR code.');
               }
             }
           );
           isScanning = true;
         } catch (err) {
           console.error('Camera error:', err);
-          alert('Camera error: ' + (err.message || err));
+          showAlertPopup('Camera error: ' + (err.message || err));
           qrContainer.style.display = 'none';
           isScanning = false;
         }

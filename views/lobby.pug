@@ -73,7 +73,7 @@ html(lang="en")
                   span.player-role Player
           else
             p(style="color:#ccc") Waiting for players to join...
-
+          
     // 🧠 Script — auto refresh + session checks
     script.
       // 🧠 Script — auto refresh + session checks
@@ -115,6 +115,65 @@ html(lang="en")
 
       // 🕒 Refresh player list periodically
       const fetchPlayersInterval = setInterval(fetchPlayers, 3000);
+
+      // === Custom confirmation popup ===
+      function showConfirmPopup(message, onConfirm) {
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position:fixed; inset:0; background:rgba(0,0,0,0.8);
+          display:flex; justify-content:center; align-items:center; z-index:10000;
+        `;
+
+        // Create popup
+        const popup = document.createElement('div');
+        popup.style.cssText = `
+          background:rgba(21,0,44,0.95);
+          border:2px solid #e200ff;
+          box-shadow:0 0 20px rgba(226,0,255,0.6);
+          border-radius:20px;
+          padding:30px 40px;
+          text-align:center;
+          color:#fff;
+          max-width:420px;
+          font-family:'Kumbh Sans';
+        `;
+
+        popup.innerHTML = `
+          <h2 style="color:#e200ff; margin-bottom:15px; font-size:1.5rem; font-weight:700">⚠️ Confirmation</h2>
+          <p style="margin-bottom:25px; font-size:1rem; line-height:1.6;">${message}</p>
+          <div style="display:flex; gap:20px; justify-content:center;">
+            <button id="confirmYes"
+              style="padding:10px 25px; background:#e200ff; color:#15002C; border:none;
+                    border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+              YES
+            </button>
+            <button id="confirmNo"
+              style="padding:10px 25px; background:#555; color:#fff; border:none;
+                    border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+              NO
+            </button>
+          </div>
+        `;
+
+        overlay.appendChild(popup);
+        document.body.appendChild(overlay);
+
+        // Event listeners
+        document.getElementById('confirmYes').addEventListener('click', () => {
+          overlay.style.opacity = '0';
+          overlay.style.transition = 'opacity 0.3s ease';
+          setTimeout(() => overlay.remove(), 300);
+          if (onConfirm) onConfirm(true);
+        });
+
+        document.getElementById('confirmNo').addEventListener('click', () => {
+          overlay.style.opacity = '0';
+          overlay.style.transition = 'opacity 0.3s ease';
+          setTimeout(() => overlay.remove(), 300);
+          if (onConfirm) onConfirm(false);
+        });
+      }
 
       // 🎨 Popup when host ends session
       function showEndPopup(message) {
@@ -176,15 +235,22 @@ html(lang="en")
 
         if (leaveForm) {
           leaveForm.addEventListener('submit', e => {
-            if (!confirm("🚪 Are you sure you want to leave this game?")) e.preventDefault();
+            e.preventDefault();
+            showConfirmPopup("🚪 Are you sure you want to leave this game?", (confirmed) => {
+              if (confirmed) leaveForm.submit();
+            });
           });
         }
 
         if (endForm) {
           endForm.addEventListener('submit', e => {
-            if (!confirm("⚠️ Are you sure you want to end this game for everyone?")) e.preventDefault();
+            e.preventDefault();
+            showConfirmPopup("⚠️ Are you sure you want to end this game for everyone?", (confirmed) => {
+              if (confirmed) endForm.submit();
+            });
           });
         }
+
 
         // 🟢 For players only — auto redirect when host starts
         if (!isHost) {

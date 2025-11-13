@@ -38,7 +38,103 @@ html(lang="en")
         let timerInterval = null;
         let scoreInterval = null;
 
-        // 🕒 Initialize Timer (reads start from backend)
+        // ======= Neon Alert Popup =======
+        function showAlertPopup(message, callback) {
+          const overlay = document.createElement('div');
+          overlay.style.cssText = `
+            position:fixed; inset:0; background:rgba(0,0,0,0.8);
+            display:flex; justify-content:center; align-items:center; z-index:10000;
+            opacity:0; transition:opacity 0.3s ease;
+          `;
+          const popup = document.createElement('div');
+          popup.style.cssText = `
+            background:rgba(21,0,44,0.95);
+            border:2px solid #e200ff;
+            box-shadow:0 0 20px rgba(226,0,255,0.6);
+            border-radius:20px;
+            padding:30px 40px;
+            text-align:center;
+            color:#fff;
+            max-width:420px;
+            font-family:'Kumbh Sans';
+          `;
+          popup.innerHTML = `
+            <h2 style="color:#e200ff; margin-bottom:15px; font-size:1.5rem; font-weight:700">⚠️ Notice</h2>
+            <p style="margin-bottom:25px; font-size:1rem; line-height:1.6;">${message}</p>
+            <button id="alertOk_${Date.now()}"
+              style="padding:10px 25px; background:#e200ff; color:#15002C; border:none;
+                    border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+              OK
+            </button>
+          `;
+          overlay.appendChild(popup);
+          document.body.appendChild(overlay);
+          requestAnimationFrame(() => (overlay.style.opacity = '1'));
+
+          const okBtn = popup.querySelector('button');
+          okBtn.addEventListener('click', () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 300);
+            if (callback) callback();
+          });
+        }
+
+        // ======= Neon Confirmation Popup =======
+        function showConfirmPopup(message, onConfirm) {
+          const overlay = document.createElement('div');
+          overlay.style.cssText = `
+            position:fixed; inset:0; background:rgba(0,0,0,0.8);
+            display:flex; justify-content:center; align-items:center; z-index:10000;
+            opacity:0; transition:opacity 0.3s ease;
+          `;
+          const popup = document.createElement('div');
+          popup.style.cssText = `
+            background:rgba(21,0,44,0.95);
+            border:2px solid #e200ff;
+            box-shadow:0 0 20px rgba(226,0,255,0.6);
+            border-radius:20px;
+            padding:30px 40px;
+            text-align:center;
+            color:#fff;
+            max-width:420px;
+            font-family:'Kumbh Sans';
+          `;
+
+          const uid = Math.random().toString(36).slice(2);
+          const yesId = `confirmYes_${uid}`;
+          const noId = `confirmNo_${uid}`;
+
+          popup.innerHTML = `
+            <h2 style="color:#e200ff; margin-bottom:15px; font-size:1.5rem; font-weight:700">⚠️ Confirmation</h2>
+            <p style="margin-bottom:25px; font-size:1rem; line-height:1.6;">${message}</p>
+            <div style="display:flex; gap:20px; justify-content:center;">
+              <button id="${yesId}"
+                style="padding:10px 25px; background:#e200ff; color:#15002C; border:none;
+                      border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+                YES
+              </button>
+              <button id="${noId}"
+                style="padding:10px 25px; background:#555; color:#fff; border:none;
+                      border-radius:8px; font-weight:700; cursor:pointer; font-size:1rem;">
+                NO
+              </button>
+            </div>
+          `;
+          overlay.appendChild(popup);
+          document.body.appendChild(overlay);
+          requestAnimationFrame(() => (overlay.style.opacity = '1'));
+
+          function close(confirmed) {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 300);
+            if (onConfirm) onConfirm(confirmed);
+          }
+
+          document.getElementById(yesId).addEventListener('click', () => close(true));
+          document.getElementById(noId).addEventListener('click', () => close(false));
+        }
+
+        // ======= Timer =======
         async function initTimer() {
           try {
             const res = await fetch('/session/time-elapsed');
@@ -55,7 +151,6 @@ html(lang="en")
           }, 1000);
         }
 
-        // 🧩 Update timer text
         function updateTimerDisplay() {
           const min = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
           const sec = String(elapsedSeconds % 60).padStart(2, '0');
@@ -63,7 +158,7 @@ html(lang="en")
           if (timerEl) timerEl.textContent = `${min}:${sec}`;
         }
 
-        // 🏅 Fetch current score
+        // ======= Live Score =======
         async function fetchScore() {
           if (!sessionId) return;
           try {
@@ -79,37 +174,38 @@ html(lang="en")
           }
         }
 
-        // ✅ Leave Game (records is_end = 1)
+        // ======= Leave Game (custom confirmation & alert) =======
         const leaveBtn = document.getElementById('leaveBtn');
         if (leaveBtn) {
           leaveBtn.addEventListener('click', async () => {
-            const confirmLeave = confirm('⚠️ Are you sure you want to leave the game? Your time and score will be saved.');
+            const confirmLeave = await new Promise(resolve =>
+              showConfirmPopup('⚠️ Are you sure you want to leave the game? Your time and score will be saved.', resolve)
+            );
             if (!confirmLeave) return;
 
             try {
               const res = await fetch('/leave-game', { method: 'POST' });
               const data = await res.json().catch(() => ({}));
               if (res.ok && (data.success || res.status === 200)) {
-                alert('👋 You have left the game. Your progress and time are saved.');
-                window.location.href = '/dashboard';
+                showAlertPopup('👋 You have left the game. Your progress and time are saved.', () => {
+                  window.location.href = '/dashboard';
+                });
               } else {
-                alert(data.message || '⚠️ Failed to leave the game.');
+                showAlertPopup(data.message || '⚠️ Failed to leave the game.');
               }
             } catch (err) {
               console.error('❌ Leave game error:', err);
-              alert('Server error while leaving.');
+              showAlertPopup('Server error while leaving.');
             }
           });
         }
 
-        // ✅ Start both systems
+        // ======= Init systems =======
         initTimer();
         fetchScore();
-
-        // Refresh score every 3 seconds
         scoreInterval = setInterval(fetchScore, 3000);
 
-        // 🧹 Cleanup when user leaves page
+        // ======= Cleanup =======
         window.addEventListener('beforeunload', () => {
           if (timerInterval) clearInterval(timerInterval);
           if (scoreInterval) clearInterval(scoreInterval);
