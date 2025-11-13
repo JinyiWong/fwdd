@@ -295,3 +295,33 @@ body::before {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 700px) {
+  .dashboard-header {
+    flex-direction: column;  /* Stack back+logo above logout */
+    align-items: flex-start;
+    padding: 1rem;
+  }
+
+  .left-header {
+    width: 100%;
+  }
+
+  .header-text h1 {
+    font-size: 1rem;
+  }
+
+  .header-text span {
+    font-size: 0.75rem;
+  }
+
+  .logo img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .logout {
+    align-self: flex-end; /* right align */
+  }
+}
+

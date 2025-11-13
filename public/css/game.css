@@ -106,8 +106,8 @@ body::after {
 
 .right-header {
   display: flex;
-  align-items: center;
-  gap: 1.5rem;
+  align-items: flex-end;
+  gap: 1rem;
 }
 
 .icon {
@@ -121,6 +121,7 @@ body::after {
   display: flex;
   align-items: center;
   font-weight: 600;
+  margin-top: 0.3rem;  
 }
 
 .leave-btn {
@@ -335,23 +336,15 @@ body::after {
    🧩 ROOM PAGE LAYOUT
    =================================================== */
 .room-layout {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;      /* cards align from top */
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
   gap: 2rem;
   padding: 2rem 3rem 4rem;
-  width: 100%;
-  box-sizing: border-box;
   z-index: 2;
-  overflow: hidden;   
 }
-
-
 
 /* Left column stack */
 .left-column {
-  flex: 0 0 70%;
-  max-width: 70%;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -359,8 +352,6 @@ body::after {
 
 /* Right column stack */
 .right-column {
-  flex: 0 0 30%;
-  max-width: 30%;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -387,3 +378,40 @@ body::after {
   }
 }
 
+@media (max-width: 700px) {
+  .game-header {
+    align-items: flex-start;
+    padding: 1rem;
+  }
+
+  .left-header {
+    width: 100%;
+  }
+
+  .header-text h1 {
+    font-size: 1rem;
+  }
+
+  .header-text span {
+    font-size: 0.75rem;
+  }
+
+  .logo img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .logout {
+    align-self: flex-end; /* right align */
+  }
+
+  .room-layout {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+  }
+
+  .left-column, .right-column {
+    width: 100%;
+  }
+}

@@ -10,17 +10,17 @@ html(lang="en")
   body
     header.dashboard-header
       div.left-header
-        a.back(href="/results/#{sessionCode}")
+        a.back(href="/history")
           img(src="/images/back.png", alt="Back", class="back-icon")
           | Back
 
         div.logo
           img(src="/images/logo.png", alt="Python Escape Logo")
           div.header-text
-            h1 Question Recap
-            span Review the questions you answered
+            h1 Session Recap
+            span Review your marks and the questions you answered
 
-      a.logout(href="/dashboard")
+      a.logout(href="/logout")
         img(src="/images/logout.png", alt="Logout", class="logout-icon")
         | Back to Home
 

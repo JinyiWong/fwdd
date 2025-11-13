@@ -69,11 +69,8 @@ app.get("/about", (req, res) => {
 app.get("/register", (req, res) => res.render("register"));
 app.get("/leaderboard", (req, res) => res.render("leaderboard"));
 app.get("/history", (req, res) => res.render("history"));
-app.get("/results", (req, res) => res.render("results"));
 app.get("/lobby", (req, res) => res.render("lobby"));
 app.get("/question", (req, res) => res.render("question"));
-app.get("/result_lobby", (req, res) => res.render("result_lobby"));
-app.get("/question_recap", (req, res) => res.render("question_recap"));
 
 // 8. Start Server
 const PORT = 3000;

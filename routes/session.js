@@ -380,6 +380,7 @@ router.get('/session/:code/active', (req, res) => {
 router.get('/results/:sessionCode', async (req, res) => {
   try {
     const { sessionCode } = req.params;
+    const username = req.session.user_name || 'Guest';
 
     // 1️⃣ Find session_id by code
     const [[session]] = await db.promise().query(
@@ -425,7 +426,9 @@ router.get('/results/:sessionCode', async (req, res) => {
       };
     });
 
-    res.render('results', { players, message: null });
+    res.render('results', { players, message: null ,            
+      currentUser: username
+    },);
 
   } catch (err) {
     console.error('❌ Error loading results:', err);

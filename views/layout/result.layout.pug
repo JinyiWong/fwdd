@@ -12,16 +12,13 @@ html(lang="en")
         // 🔹 Back Button with image
         a.back(href="/dashboard")
           img(src="/images/back.png", alt="Back", class="back-icon")
-          | Back
+          | Home
 
         div.logo
           img(src="/images/logo.png", alt="Python Escape Logo")
           div.header-text
             h1 Python Escape
-            span Welcome, user
-
-      a.logout(href="/logout")
-        img(src="/images/logout.png", alt="Logout", class="logout-icon")
-        | LOGOUT
+            span Welcome, #{currentUser || 'user'}
+            
     main.dashboard
       block content

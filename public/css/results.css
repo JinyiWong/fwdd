@@ -193,6 +193,7 @@ th {
   padding: 0.75rem 0.5rem;
   border-bottom: 1px solid rgba(226, 0, 255, 0.3);
   white-space: nowrap;
+  text-align: left;
 }
 
 td {
@@ -261,7 +262,6 @@ th {
   white-space: normal; /* allow line breaks */
   word-wrap: break-word;
   word-break: break-word;
-  text-align: center;
 }
 
 /* Adjust only small screens for better wrapping */
@@ -279,6 +279,36 @@ th {
     width: 90px; /* optional: narrow just this column */
   }
 }
+
+@media (max-width: 700px) {
+  .dashboard-header {
+    flex-direction: column;  /* Stack back+logo above logout */
+    align-items: flex-start;
+    padding: 1rem;
+  }
+
+  .left-header {
+    width: 100%;
+  }
+
+  .header-text h1 {
+    font-size: 1rem;
+  }
+
+  .header-text span {
+    font-size: 0.75rem;
+  }
+
+  .logo img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .logout {
+    align-self: flex-end; /* right align */
+  }
+}
+
 
 
 

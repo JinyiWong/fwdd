@@ -124,7 +124,7 @@ router.get('/power-cards', async (req, res) => {
   try {
     // ✅ ADD pi.is_activated to the SELECT
     const [rows] = await db.promise().query(
-      `SELECT i.item_id, i.item_name, i.power_card_type, pi.is_activated
+      `SELECT i.item_id, i.item_name, i.power_card_type, pi.is_activated, i.item_description
        FROM tbl_player_items pi
        JOIN tbl_items i ON pi.item_id = i.item_id
        WHERE pi.session_id = ? AND pi.user_id = ? AND i.is_power_card = 1`,
@@ -322,6 +322,11 @@ router.get('/question_recap', async (req, res) => {
       return res.redirect('/dashboard');
     }
 
+    const [[session]] = await db.promise().query(
+      `SELECT session_code FROM tbl_game_session WHERE session_id = ?`,
+      [sessionId]
+    );
+
     // 🟢 Fetch player performance
     const [[player]] = await db.promise().query(
       `SELECT score, time_taken FROM tbl_session_players 
@@ -356,6 +361,7 @@ router.get('/question_recap', async (req, res) => {
     const formattedTime = `${mins}:${secs.toString().padStart(2, '0')}`;
 
     res.render('question_recap', {
+      sessionCode,
       score: player.score || 0,
       timeTaken: formattedTime,
       itemsCollected: itemStats.collected || 0,

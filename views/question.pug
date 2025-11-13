@@ -151,6 +151,7 @@ block content
               <img class="icon" src="/images/power_${card.power_card_type.toLowerCase()}.png" alt="${card.power_card_type}" />
               <div class="power-info">
                 <strong>${card.power_card_type}</strong>
+                <p>${card.item_description}</p>
               </div>
             `;
             const btn = document.createElement('button');
@@ -174,7 +175,7 @@ block content
 
       // ======= Activate Power Card =======
       async function activatePowerCard(type) {
-        const confirmUse = confirm(`Activate \${type} power card?`);
+        const confirmUse = confirm(`Activate power card?`);
         if (!confirmUse) return;
 
         try {
