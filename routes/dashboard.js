@@ -99,7 +99,6 @@ module.exports = (db) => {
     const username = req.session.user_name || 'Player';
     if (!userId) return res.redirect('/login');
 
-    // ===== 🏆 Top Leaderboard (Top 10 globally) =====
     const [leaderboardRows] = await db.promise().query(`
       SELECT 
         u.username,
@@ -115,7 +114,6 @@ module.exports = (db) => {
           WHERE sp2.user_id = sp.user_id
         )
       ORDER BY sp.score DESC, sp.time_taken ASC
-      LIMIT 10;
     `);
 
     const leaderboard = leaderboardRows.map((row, i) => ({

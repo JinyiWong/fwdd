@@ -322,10 +322,13 @@ router.get('/question_recap', async (req, res) => {
       return res.redirect('/dashboard');
     }
 
+    // 🟢 Get session code using session_id
     const [[session]] = await db.promise().query(
       `SELECT session_code FROM tbl_game_session WHERE session_id = ?`,
       [sessionId]
     );
+
+    const sessionCode = session?.session_code || 'UNKNOWN';
 
     // 🟢 Fetch player performance
     const [[player]] = await db.promise().query(
@@ -360,6 +363,7 @@ router.get('/question_recap', async (req, res) => {
     const secs = player.time_taken % 60;
     const formattedTime = `${mins}:${secs.toString().padStart(2, '0')}`;
 
+    // 🟢 Render the recap page
     res.render('question_recap', {
       sessionCode,
       score: player.score || 0,
@@ -368,11 +372,13 @@ router.get('/question_recap', async (req, res) => {
       accuracy,
       answers
     });
+
   } catch (err) {
     console.error('❌ Error loading question recap:', err);
     res.status(500).send('Error loading question recap page.');
   }
 });
+
 
 
   // =====================================
